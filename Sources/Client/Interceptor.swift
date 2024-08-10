@@ -17,7 +17,7 @@ public protocol RetryHandlerProtocol {
 open class Interceptor<ErrorType: CustomErrorProtocol>: RetryHandlerProtocol {
     public let numberOfRetries: Int
 
-    init(numberOfRetries: Int) {
+    public init(numberOfRetries: Int) {
         self.numberOfRetries = numberOfRetries
     }
 

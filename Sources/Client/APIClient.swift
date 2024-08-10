@@ -5,10 +5,10 @@ import Foundation
 
 public class APIClient<ErrorType: CustomErrorProtocol> {
     // MARK: - Properties
-
     private let apiQueue = DispatchQueue(label: "com.apiQueue", qos: .background)
     private var retryHandler: Interceptor = Interceptor<ErrorType>(numberOfRetries: 0)
     private var requestsToRetry: [URLRequest] = []
+    public init() {}
 }
 
 // MARK: - APIClient+Interceptor

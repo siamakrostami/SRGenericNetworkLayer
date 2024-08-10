@@ -4,15 +4,24 @@ import Foundation
 // MARK: - GeneralErrorResponse
 
 public struct GeneralErrorResponse: CustomErrorProtocol {
-    let code: Int
-    let details: String
-    let message: String
-    let path: String
-    let suggestion: String
-    let timestamp: String
+    public let code: Int
+    public let details: String
+    public let message: String
+    public let path: String
+    public let suggestion: String
+    public let timestamp: String
 
     public var errorDescription: String {
         return message
+    }
+    
+    public init(code: Int, details: String, message: String, path: String, suggestion: String, timestamp: String) {
+        self.code = code
+        self.details = details
+        self.message = message
+        self.path = path
+        self.suggestion = suggestion
+        self.timestamp = timestamp
     }
 }
 
