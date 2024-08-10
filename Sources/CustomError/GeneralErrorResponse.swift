@@ -11,7 +11,7 @@ public struct GeneralErrorResponse: CustomErrorProtocol {
     let suggestion: String
     let timestamp: String
 
-    var errorDescription: String {
+    public var errorDescription: String {
         return message
     }
 }

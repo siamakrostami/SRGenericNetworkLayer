@@ -1,23 +1,39 @@
 // swift-tools-version: 5.10
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
 import PackageDescription
 
 let package = Package(
     name: "SRGenericNetworkLayer",
+    platforms: [
+        .iOS(.v13),  // Specify your minimum deployment target
+    ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SRGenericNetworkLayer",
-            targets: ["SRGenericNetworkLayer"]),
+            targets: ["SRGenericNetworkLayer"]
+        ),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "SRGenericNetworkLayer"),
+            name: "SRGenericNetworkLayer",
+            path: "Sources",
+            sources: [
+                "SRGenericNetworkLayer",
+                "HeaderHandler",
+                "Encoding",
+                "CustomError",
+                "Log",
+                "Mime",
+                "Error",
+                "Client",
+                "UploadProgress",
+                "Router",
+                "Data"
+            ]
+        ),
         .testTarget(
             name: "SRGenericNetworkLayerTests",
-            dependencies: ["SRGenericNetworkLayer"]),
+            dependencies: ["SRGenericNetworkLayer"],
+            path: "Tests/SRGenericNetworkLayerTests"
+        ),
     ]
 )

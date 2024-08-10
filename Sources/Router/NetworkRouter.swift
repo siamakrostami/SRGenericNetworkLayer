@@ -22,7 +22,7 @@ public enum NetworkRouterError: Error {
 
 // MARK: - NetworkRouter
 
-open protocol NetworkRouter {
+public protocol NetworkRouter {
     var baseURLString: String { get }
     var method: RequestMethod? { get }
     var path: String { get }
@@ -35,37 +35,37 @@ open protocol NetworkRouter {
 // MARK: - Network Router Protocols impl
 
 extension NetworkRouter {
-    open var baseURLString: String {
+    public var baseURLString: String {
         return ""
     }
 
     // Add Rout method here
-    open var method: RequestMethod? {
+    public var method: RequestMethod? {
         return .none
     }
 
     // Set APIs'Rout for each case
-    open var path: String {
+    public var path: String {
         return ""
     }
 
     // Set header here
-    open var headers: [String: String]? {
+    public var headers: [String: String]? {
         return nil
     }
 
     // Return each case parameters
-    open var params: [String: Any]? {
+    public var params: [String: Any]? {
         return nil
     }
 
-    open var queryParams: [String: Any]? {
+    public var queryParams: [String: Any]? {
         return nil
     }
 
     // MARK: URLRequestConvertible
 
-    open func asURLRequest() throws -> URLRequest {
+    public func asURLRequest() throws -> URLRequest {
         let fullPath = baseURLString + path
         guard let url = URL(string: fullPath) else {
             throw NetworkRouterError.invalidURL

@@ -9,6 +9,6 @@ import Foundation
 
 // MARK: - CustomErrorProtocol
 
-open protocol CustomErrorProtocol: Codable, Error {
-    open var errorDescription: String { get }
+public protocol CustomErrorProtocol: Codable, Error {
+    var errorDescription: String { get }
 }

@@ -3,7 +3,7 @@ import Foundation
 
 // MARK: - RetryHandlerProtocol
 
-open protocol RetryHandlerProtocol {
+public protocol RetryHandlerProtocol {
     associatedtype ErrorType: CustomErrorProtocol
     var numberOfRetries: Int { get }
     func shouldRetry(request: URLRequest, error: NetworkError<ErrorType>) -> Bool
@@ -15,7 +15,7 @@ open protocol RetryHandlerProtocol {
 // MARK: - DefaultRetryHandler
 
 open class Interceptor<ErrorType: CustomErrorProtocol>: RetryHandlerProtocol {
-    let numberOfRetries: Int
+    public let numberOfRetries: Int
 
     init(numberOfRetries: Int) {
         self.numberOfRetries = numberOfRetries
