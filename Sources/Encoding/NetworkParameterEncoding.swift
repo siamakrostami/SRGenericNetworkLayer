@@ -14,33 +14,33 @@ public typealias Parameters = [String: Any]
 // MARK: - EncodingError
 
 // Error Handling
-enum EncodingError: Error {
+public enum EncodingError: Error {
     case missingURL
     case jsonEncodingFailed(error: Error)
 }
 
 // MARK: - NetworkParameterEncoding
 
-protocol NetworkParameterEncoding {
+public protocol NetworkParameterEncoding {
     func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws
 }
 
 // MARK: - URLEncoding
 
-struct URLEncoding: NetworkParameterEncoding {
+public struct URLEncoding: NetworkParameterEncoding {
     // MARK: Internal
 
-    enum Destination {
+    public enum Destination {
         case methodDependent
         case queryString
         case httpBody
     }
 
-    var destination: Destination
-    var arrayEncoding: ArrayEncoding = .noBrackets
-    var boolEncoding: BoolEncoding = .numeric
+    public var destination: Destination
+    public var arrayEncoding: ArrayEncoding = .noBrackets
+    public var boolEncoding: BoolEncoding = .numeric
 
-    func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
+    public func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
         guard let parameters = parameters else {
             return
         }
@@ -59,7 +59,7 @@ struct URLEncoding: NetworkParameterEncoding {
         }
     }
 
-    func queryComponents(fromKey key: String, value: Any) -> [(String, String)] {
+    public func queryComponents(fromKey key: String, value: Any) -> [(String, String)] {
         var components: [(String, String)] = []
 
         switch value {
@@ -81,7 +81,7 @@ struct URLEncoding: NetworkParameterEncoding {
         return components
     }
 
-    func escape(_ string: String) -> String {
+    public func escape(_ string: String) -> String {
         string.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? string
     }
 
@@ -116,8 +116,8 @@ struct URLEncoding: NetworkParameterEncoding {
 
 // MARK: - JSONEncoding
 
-struct JSONEncoding: NetworkParameterEncoding {
-    func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
+public struct JSONEncoding: NetworkParameterEncoding {
+    public func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
         guard let parameters = parameters else {
             return
         }
@@ -134,14 +134,14 @@ struct JSONEncoding: NetworkParameterEncoding {
 
 // MARK: - ArrayEncoding
 
-enum ArrayEncoding {
+public enum ArrayEncoding {
     case brackets
     case noBrackets
     case indexInBrackets
 
     // MARK: Internal
 
-    func encode(key: String, atIndex index: Int) -> String {
+    public func encode(key: String, atIndex index: Int) -> String {
         switch self {
         case .brackets: return "\(key)[]"
         case .noBrackets: return key
@@ -152,13 +152,13 @@ enum ArrayEncoding {
 
 // MARK: - BoolEncoding
 
-enum BoolEncoding {
+public enum BoolEncoding {
     case numeric
     case literal
 
     // MARK: Internal
 
-    func encode(value: Bool) -> String {
+    public func encode(value: Bool) -> String {
         switch self {
         case .numeric: return value ? "1" : "0"
         case .literal: return value ? "true" : "false"

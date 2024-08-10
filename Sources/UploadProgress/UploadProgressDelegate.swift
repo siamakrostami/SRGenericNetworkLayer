@@ -7,10 +7,10 @@
 
 import Foundation
 
-class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
+public class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, URLSessionDataDelegate {
     var progressHandler: ((Double) -> Void)?
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
         let progress = Double(totalBytesSent) / Double(totalBytesExpectedToSend)
         progressHandler?(progress)
     }

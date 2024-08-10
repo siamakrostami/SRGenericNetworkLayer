@@ -3,7 +3,7 @@ import Foundation
 
 // MARK: - GeneralErrorResponse
 
-struct GeneralErrorResponse: CustomErrorProtocol {
+public struct GeneralErrorResponse: CustomErrorProtocol {
     let code: Int
     let details: String
     let message: String
@@ -17,7 +17,7 @@ struct GeneralErrorResponse: CustomErrorProtocol {
 }
 
 extension GeneralErrorResponse {
-    static func unknown() -> GeneralErrorResponse {
+    public static func unknown() -> GeneralErrorResponse {
         return GeneralErrorResponse(
             code: 999,
             details: "An unknown error occurred",

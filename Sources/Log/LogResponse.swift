@@ -1,15 +1,15 @@
 import Foundation
 
-class URLSessionLogger {
+public class URLSessionLogger {
     // MARK: Lifecycle
 
     private init() {}
 
     // MARK: Internal
 
-    static let shared = URLSessionLogger() // Singleton instance
+    public static let shared = URLSessionLogger() // Singleton instance
 
-    func logRequest(_ request: URLRequest) {
+    public func logRequest(_ request: URLRequest) {
         print("\n🚀🚀🚀 REQUEST 🚀🚀🚀")
         print("🔈 \(request.httpMethod ?? "UNKNOWN") \(request.url?.absoluteString ?? "Invalid URL")")
         print("Headers:")
@@ -20,7 +20,7 @@ class URLSessionLogger {
         print("🔼🔼🔼 END REQUEST 🔼🔼🔼")
     }
 
-    func logResponse(_ response: URLResponse?, data: Data?, error: Error?) {
+    public func logResponse(_ response: URLResponse?, data: Data?, error: Error?) {
         if let httpResponse = response as? HTTPURLResponse {
             if 200 ..< 300 ~= httpResponse.statusCode {
                 print("\n✅✅✅ SUCCESS RESPONSE ✅✅✅")

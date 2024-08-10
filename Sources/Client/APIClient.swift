@@ -3,7 +3,7 @@ import Foundation
 
 // MARK: - APIClient
 
-class APIClient<ErrorType: CustomErrorProtocol> {
+public class APIClient<ErrorType: CustomErrorProtocol> {
     // MARK: - Properties
 
     private let apiQueue = DispatchQueue(label: "com.apiQueue", qos: .background)
@@ -15,7 +15,7 @@ class APIClient<ErrorType: CustomErrorProtocol> {
 
 extension APIClient {
     @discardableResult
-    func set(interceptor: Interceptor<ErrorType>) -> Self {
+    public func set(interceptor: Interceptor<ErrorType>) -> Self {
         apiQueue.sync(flags: .barrier) {
             retryHandler = interceptor
         }
@@ -28,7 +28,7 @@ extension APIClient {
 extension APIClient {
     // MARK: - Combine Network Request
 
-    func request<T: Codable>(_ endpoint: NetworkRouter) -> AnyPublisher<T, NetworkError<ErrorType>> {
+    public func request<T: Codable>(_ endpoint: NetworkRouter) -> AnyPublisher<T, NetworkError<ErrorType>> {
         guard let urlRequest = try? endpoint.asURLRequest() else {
             return Fail(error: .unknown).eraseToAnyPublisher()
         }
@@ -95,7 +95,7 @@ extension APIClient {
 // MARK: - APIClient+CombineUploadRequest
 
 extension APIClient {
-    func uploadRequest<T: Codable>(_ endpoint: NetworkRouter, withName: String, file: Data?, progressCompletion: @escaping (Double) -> Void) -> AnyPublisher<T, NetworkError<ErrorType>> {
+    public func uploadRequest<T: Codable>(_ endpoint: NetworkRouter, withName: String, file: Data?, progressCompletion: @escaping (Double) -> Void) -> AnyPublisher<T, NetworkError<ErrorType>> {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = file else {
             return Fail(error: NetworkError<ErrorType>.unknown).eraseToAnyPublisher()
         }
@@ -157,7 +157,7 @@ extension APIClient {
 extension APIClient {
     // MARK: - Async/Await Network Request
 
-    func asyncRequest<T: Codable>(_ endpoint: NetworkRouter) async throws -> T {
+    public func asyncRequest<T: Codable>(_ endpoint: NetworkRouter) async throws -> T {
         guard let urlRequest = try? endpoint.asURLRequest() else {
             throw NetworkError<ErrorType>.unknown
         }
@@ -253,7 +253,7 @@ extension APIClient {
 extension APIClient {
     // MARK: - Async/Await Upload Request
 
-    func asyncUploadRequest<T: Codable>(_ endpoint: NetworkRouter, withName: String, file: Data?, progressCompletion: @escaping (Double) -> Void) async throws -> T {
+    public func asyncUploadRequest<T: Codable>(_ endpoint: NetworkRouter, withName: String, file: Data?, progressCompletion: @escaping (Double) -> Void) async throws -> T {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = file else {
             throw NetworkError<ErrorType>.unknown
         }

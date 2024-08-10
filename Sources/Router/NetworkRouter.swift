@@ -3,7 +3,7 @@ import Foundation
 
 // MARK: - RequestMethod
 
-enum RequestMethod: String {
+public enum RequestMethod: String {
     case get
     case post
     case put
@@ -15,14 +15,14 @@ enum RequestMethod: String {
 
 // MARK: - NetworkRouterError
 
-enum NetworkRouterError: Error {
+public enum NetworkRouterError: Error {
     case invalidURL
     case encodingFailed
 }
 
 // MARK: - NetworkRouter
 
-protocol NetworkRouter {
+open protocol NetworkRouter {
     var baseURLString: String { get }
     var method: RequestMethod? { get }
     var path: String { get }
@@ -35,37 +35,37 @@ protocol NetworkRouter {
 // MARK: - Network Router Protocols impl
 
 extension NetworkRouter {
-    var baseURLString: String {
+    open var baseURLString: String {
         return ""
     }
 
     // Add Rout method here
-    var method: RequestMethod? {
+    open var method: RequestMethod? {
         return .none
     }
 
     // Set APIs'Rout for each case
-    var path: String {
+    open var path: String {
         return ""
     }
 
     // Set header here
-    var headers: [String: String]? {
+    open var headers: [String: String]? {
         return nil
     }
 
     // Return each case parameters
-    var params: [String: Any]? {
+    open var params: [String: Any]? {
         return nil
     }
 
-    var queryParams: [String: Any]? {
+    open var queryParams: [String: Any]? {
         return nil
     }
 
     // MARK: URLRequestConvertible
 
-    func asURLRequest() throws -> URLRequest {
+    open func asURLRequest() throws -> URLRequest {
         let fullPath = baseURLString + path
         guard let url = URL(string: fullPath) else {
             throw NetworkRouterError.invalidURL

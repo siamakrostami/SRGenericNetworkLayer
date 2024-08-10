@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - NetworkError
 
-enum NetworkError<ErrorType: CustomErrorProtocol>: Error {
+public enum NetworkError<ErrorType: CustomErrorProtocol>: Error {
     case unknown
     case urlError(URLError)
     case decodingError(Error)
@@ -20,7 +20,7 @@ enum NetworkError<ErrorType: CustomErrorProtocol>: Error {
 // MARK: LocalizedError
 
 extension NetworkError: LocalizedError {
-    var localizedErrorDescription: String? {
+    public var localizedErrorDescription: String? {
         switch self {
         case .urlError(let error):
             return error.localizedDescription
