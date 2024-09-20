@@ -1,0 +1,15 @@
+{
+  "originHash" : "7d44b07341c26e3e45d5ca498004c95609453d54b5cf58938b7005206990ea5b",
+  "pins" : [
+    {
+      "identity" : "srgenericnetworklayer",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/siamakrostami/SRGenericNetworkLayer",
+      "state" : {
+        "revision" : "1fd66e38b6a5cfebba5ac8ff7d6e5a988a0aa6c1",
+        "version" : "1.0.5"
+      }
+    }
+  ],
+  "version" : 3
+}
