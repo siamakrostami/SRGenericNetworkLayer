@@ -38,5 +38,6 @@ let package = Package(
             dependencies: ["SRGenericNetworkLayer"],
             path: "Tests/SRGenericNetworkLayerTests"
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5,.v6]
 )
