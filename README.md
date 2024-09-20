@@ -194,8 +194,6 @@ The sample app consists of the following key files:
 - `NetworkError.swift`: Custom error type for network errors
 - `SRGenericNetworkLayerExampleApp.swift`: Main app structure
 
-For more details on the sample app, including setup instructions and customization options, please refer to the README file in the `Examples/SRGenericNetworkLayerExampleApp` directory.
-
 ## Contributing
 
 Contributions to SRGenericNetworkLayer are welcome! Please feel free to submit a Pull Request.
