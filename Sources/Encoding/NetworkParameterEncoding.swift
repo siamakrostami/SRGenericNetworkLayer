@@ -1,53 +1,39 @@
-//
-//  NetworkParameterEncoding.swift
-//  SRNetworkLayer
-//
-//  Created by Siamak Rostami on 7/15/24.
-//
-
 import Foundation
-
-// MARK: - Definitions
-
-public typealias Parameters = [String: Any]
 
 // MARK: - EncodingError
 
-// Error Handling
-public enum EncodingError: Error {
+/// Error Handling
+public enum EncodingError: Error, Sendable {
     case missingURL
     case jsonEncodingFailed(error: Error)
 }
 
 // MARK: - NetworkParameterEncoding
 
-public protocol NetworkParameterEncoding {
-    func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws
+/// Protocol for encoding parameters in network requests
+public protocol NetworkParameterEncoding: Sendable {
+    func encode<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T?) throws
 }
 
 // MARK: - URLEncoding
 
-public struct URLEncoding: NetworkParameterEncoding {
-    // MARK: Internal
-
-    public enum Destination {
+/// URL encoding implementation
+public struct URLEncoding: NetworkParameterEncoding, Sendable {
+    public enum Destination: Sendable {
         case methodDependent
         case queryString
         case httpBody
     }
 
     public var destination: Destination
-    public var arrayEncoding: ArrayEncoding = .noBrackets
-    public var boolEncoding: BoolEncoding = .numeric
 
-    public func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
-        guard let parameters = parameters else {
-            return
-        }
+    public func encode<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T?) throws {
+        guard let parameters = parameters else { return }
 
         switch destination {
         case .methodDependent:
-            if let method = RequestMethod(rawValue: urlRequest.httpMethod?.lowercased() ?? "get"), [.get, .delete, .head].contains(method) {
+            if let method = RequestMethod(rawValue: urlRequest.httpMethod?.lowercased() ?? "get"),
+               [.get, .delete, .head].contains(method) {
                 try encodeQueryString(&urlRequest, with: parameters)
             } else {
                 try encodeHttpBody(&urlRequest, with: parameters)
@@ -59,71 +45,37 @@ public struct URLEncoding: NetworkParameterEncoding {
         }
     }
 
-    public func queryComponents(fromKey key: String, value: Any) -> [(String, String)] {
-        var components: [(String, String)] = []
-
-        switch value {
-        case let dictionary as [String: Any]:
-            for (nestedKey, value) in dictionary {
-                components += queryComponents(fromKey: "\(key)[\(nestedKey)]", value: value)
-            }
-        case let array as [Any]:
-            for (index, value) in array.enumerated() {
-                let encodedKey = arrayEncoding.encode(key: key, atIndex: index)
-                components += queryComponents(fromKey: encodedKey, value: value)
-            }
-        case let bool as Bool:
-            let encodedValue = boolEncoding.encode(value: bool)
-            components.append((escape(key), escape(encodedValue)))
-        case let value:
-            components.append((escape(key), escape("\(value)")))
-        }
-        return components
-    }
-
-    public func escape(_ string: String) -> String {
-        string.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? string
-    }
-
     // MARK: Private
 
-    private func encodeQueryString(_ urlRequest: inout URLRequest, with parameters: Parameters) throws {
+    private func encodeQueryString<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T) throws {
         guard let url = urlRequest.url else {
             throw EncodingError.missingURL
         }
-        if var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false), !parameters.isEmpty {
-            let percentEncodedQuery = (urlComponents.percentEncodedQuery.map { $0 + "&" } ?? "") + query(parameters)
+        
+        let queryItems = try URLQueryEncoder().encode(parameters)  // Encode the parameters into query string
+        if var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false), !queryItems.isEmpty {
+            let percentEncodedQuery = (urlComponents.percentEncodedQuery.map { $0 + "&" } ?? "") + queryItems
             urlComponents.percentEncodedQuery = percentEncodedQuery
             urlRequest.url = urlComponents.url
         }
     }
 
-    private func encodeHttpBody(_ urlRequest: inout URLRequest, with parameters: Parameters) throws {
-        urlRequest.httpBody = Data(query(parameters).utf8)
+    private func encodeHttpBody<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T) throws {
+        let jsonData = try JSONEncoder().encode(parameters)
+        urlRequest.httpBody = jsonData
         urlRequest.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
-    }
-
-    private func query(_ parameters: Parameters) -> String {
-        var components: [(String, String)] = []
-
-        for key in parameters.keys.sorted(by: <) {
-            let value = parameters[key]!
-            components += queryComponents(fromKey: key, value: value)
-        }
-        return components.map { "\($0.0)=\($0.1)" }.joined(separator: "&")
     }
 }
 
 // MARK: - JSONEncoding
 
-public struct JSONEncoding: NetworkParameterEncoding {
-    public func encode(_ urlRequest: inout URLRequest, with parameters: Parameters?) throws {
-        guard let parameters = parameters else {
-            return
-        }
+/// JSON encoding implementation
+public struct JSONEncoding: NetworkParameterEncoding, Sendable {
+    public func encode<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T?) throws {
+        guard let parameters = parameters else { return }
 
         do {
-            let data = try JSONSerialization.data(withJSONObject: parameters, options: .prettyPrinted)
+            let data = try JSONEncoder().encode(parameters)
             urlRequest.httpBody = data
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         } catch {
@@ -132,36 +84,50 @@ public struct JSONEncoding: NetworkParameterEncoding {
     }
 }
 
-// MARK: - ArrayEncoding
+// MARK: - URLQueryEncoder
 
-public enum ArrayEncoding {
-    case brackets
-    case noBrackets
-    case indexInBrackets
-
-    // MARK: Internal
-
-    public func encode(key: String, atIndex index: Int) -> String {
-        switch self {
-        case .brackets: return "\(key)[]"
-        case .noBrackets: return key
-        case .indexInBrackets: return "\(key)[\(index)]"
+/// Encoder for URL query parameters
+public struct URLQueryEncoder {
+    func encode<T: Codable>(_ value: T) throws -> String {
+        let jsonData = try JSONEncoder().encode(value)
+        guard let jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] else {
+            throw EncodingError.jsonEncodingFailed(error: NSError(domain: "Invalid JSON", code: 1))
         }
+
+        return query(from: jsonObject)
     }
-}
 
-// MARK: - BoolEncoding
+    private func query(from parameters: [String: Any]) -> String {
+        var components: [(String, String)] = []
 
-public enum BoolEncoding {
-    case numeric
-    case literal
-
-    // MARK: Internal
-
-    public func encode(value: Bool) -> String {
-        switch self {
-        case .numeric: return value ? "1" : "0"
-        case .literal: return value ? "true" : "false"
+        for key in parameters.keys.sorted(by: <) {
+            let value = parameters[key]!
+            components += queryComponents(fromKey: key, value: value)
         }
+        return components.map { "\($0.0)=\($0.1)" }.joined(separator: "&")
+    }
+
+    private func queryComponents(fromKey key: String, value: Any) -> [(String, String)] {
+        var components: [(String, String)] = []
+
+        if let dictionary = value as? [String: Any] {
+            for (nestedKey, value) in dictionary {
+                components += queryComponents(fromKey: "\(key)[\(nestedKey)]", value: value)
+            }
+        } else if let array = value as? [Any] {
+            for value in array {
+                components += queryComponents(fromKey: "\(key)[]", value: value)
+            }
+        } else if let bool = value as? Bool {
+            components.append((escape(key), escape(bool ? "true" : "false")))
+        } else {
+            components.append((escape(key), escape("\(value)")))
+        }
+
+        return components
+    }
+
+    private func escape(_ string: String) -> String {
+        return string.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? string
     }
 }

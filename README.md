@@ -1,143 +1,172 @@
-
 # SRGenericNetworkLayer
 
-**SRGenericNetworkLayer** is a Swift-based network layer designed to simplify network communication in your iOS applications. It provides a robust and flexible structure for making network requests, handling responses, and managing dependencies.
+SRGenericNetworkLayer is a powerful and flexible networking layer for Swift applications. It provides a generic, protocol-oriented approach to handling API requests, supporting both Combine and async/await paradigms. This package is designed to be easy to use, highly customizable, and compatible with Swift 6 and the Sendable protocol.
 
 ## Features
 
-- Asynchronous network requests using Combine and async/await.
-- Support for file uploads with progress tracking.
-- Retry logic with customizable interceptors.
-- Dependency injection for better testability and modularity.
-- Comprehensive error handling and logging.
+- Generic API client supporting various types of network requests
+- Protocol-oriented design for easy customization and extensibility
+- Support for both Combine and async/await
+- Robust error handling with custom error types
+- Retry mechanism for failed requests
+- File upload support with progress tracking
+- Flexible parameter encoding (URL and JSON)
+- Comprehensive logging system
+- MIME type detection for file uploads
+- Thread-safe design with Sendable protocol support
+- Swift 6 compatible
 
 ## Requirements
 
-- iOS 13.0+
-- Swift 5.0+
-- Xcode 11.0+
+- iOS 13.0+ / macOS 10.15+
+- Swift 5.5+
+- Xcode 13.0+
 
 ## Installation
 
-You can add `SRGenericNetworkLayer` to your project using Swift Package Manager.
-
 ### Swift Package Manager
 
-1. In Xcode, go to `File` > `Add Packages`.
-2. Enter the repository URL: `https://github.com/siamakrostami/SRGenericNetworkLayer`.
-3. Select the latest release version and add the package to your project.
+Add the following to your `Package.swift` file:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/siamakrostami/SRGenericNetworkLayer.git", from: "1.0.0")
+]
+```
 
 ## Usage
 
-### Setting Up the Environment
+### Initializing APIClient
 
-Initialize the `AppEnvironment` in your `AppDelegate` or `SceneDelegate`:
+The `APIClient` can be initialized in several ways to suit different use cases:
 
 ```swift
-@UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+// Basic initialization with default settings
+let defaultClient = APIClient<MyErrorType>()
 
-    var window: UIWindow?
+// Initialization with custom QoS (Quality of Service)
+let backgroundClient = APIClient<MyErrorType>(qos: .background)
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        let _ = AppEnvironment.setup()
-        return true
-    }
+// Initialization with custom log level
+let verboseClient = APIClient<MyErrorType>(logLevel: .verbose)
+
+// Initialization with both custom QoS and log level
+let customClient = APIClient<MyErrorType>(qos: .userInitiated, logLevel: .standard)
+
+// Initialization with a custom retry handler
+let retryClient = APIClient<MyErrorType>()
+retryClient.set(interceptor: MyCustomRetryHandler())
+
+// Initialization with custom settings and chained configuration
+let fullyCustomClient = APIClient<MyErrorType>(qos: .userInitiated, logLevel: .minimal)
+    .set(interceptor: MyCustomRetryHandler())
+    .setLog(level: .verbose)
+```
+
+### Defining an API Endpoint
+
+```swift
+struct UserAPI: NetworkRouter {
+    typealias Parameters = UserParameters
+    typealias QueryParameters = UserQueryParameters
+
+    var baseURLString: String { return "https://api.example.com" }
+    var method: RequestMethod? { return .get }
+    var path: String { return "/users" }
+    var headers: [String: String]? { return HeaderHandler.shared.addAcceptHeaders(type: .applicationJson).addContentTypeHeader(type: .applicationJson).build() }
+    var params: Parameters? { return UserParameters(id: 123) }
+    var queryParams: QueryParameters? { return UserQueryParameters(includeDetails: true) }
 }
 ```
 
-### Making a Network Request
-
-To make a network request, use the `NetworkRepositories` class:
+### Making a Request with Combine
 
 ```swift
-import Combine
-import Foundation
+let apiClient = APIClient<MyErrorType>()
 
-// MARK: - LoginViewModel
-
-class LoginViewModel: BaseViewModel {
-    @Published var userModel: UserResponseModel?
-    @Published var isLoading: Bool = false
-    var loginCancellableSet = Set<AnyCancellable>()
-}
-
-extension LoginViewModel {
-    func login(email: String, password: String) {
-        isLoading = true
-        remoteRepositories.loginServices?
-            .login(email: email, password: password)
-            .sink(receiveCompletion: { [weak self] completion in
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let failure):
-                    self?.isLoading = false
-                    self?.error.send(failure)
-                }
-            }, receiveValue: { [weak self] model in
-                self?.isLoading = false
-                self?.userModel = model
-            }).store(in: &loginCancellableSet)
-    }
-
-    @MainActor
-    func asyncLogin(email: String, password: String) {
-        isLoading = true
-        Task {
-            do {
-                let response = try await remoteRepositories.loginServices?.asyncLogin(email: email, password: password)
-                userModel = response
-                isLoading = false
-            } catch let error as NetworkError {
-                isLoading = false
-                self.error.send(error)
-            }
+apiClient.request(UserAPI())
+    .sink(receiveCompletion: { completion in
+        switch completion {
+        case .finished:
+            print("Request completed successfully")
+        case .failure(let error):
+            print("Request failed with error: \(error)")
         }
-    }
-}
+    }, receiveValue: { (response: UserResponse) in
+        print("Received user: \(response)")
+    })
+    .store(in: &cancellables)
 ```
 
-### Handling File Uploads
-
-To upload a file, use the `asyncUploadRequest` method:
+### Making a Request with async/await
 
 ```swift
-class UploadViewModel {
+let apiClient = APIClient<MyErrorType>()
 
-    @MainActor
-    func uploadProfilePicture(file: Data?, fileName: String) {
-        isLoading = true
-        Task {
-            do{
-                let response = try await remoteRepositories.profilePictureServices?.asyncUpload(file: file, name: fileName, uploadProgress: { [weak self] progress in
-                    guard let _ = self else {return}
-                    debugPrint(progress)
-                })
-                self.isLoading = false
-                self.uploadPhotoModel = response
-            }catch let error as NetworkError{
-                self.isLoading = false
-                self.error.send(error)
-            }
-        }
-    }
+do {
+    let response: UserResponse = try await apiClient.asyncRequest(UserAPI())
+    print("Received user: \(response)")
+} catch {
+    print("Request failed with error: \(error)")
 }
 ```
 
-## Documentation
+### File Upload
 
-For full documentation, please refer to the source code and the comments within. Each method is documented to provide clarity on its purpose, parameters, return values, and potential errors.
+```swift
+let apiClient = APIClient<MyErrorType>()
 
-## Example App
+let fileData = // ... your file data ...
+let endpoint = UploadAPI()
 
-The repository includes an example app demonstrating how to use the `SRGenericNetworkLayer`. The example app is located in the `Examples/ExampleApp` directory. You can run this app to see the package in action.
+apiClient.uploadRequest(endpoint, withName: "file", data: fileData) { progress in
+    print("Upload progress: \(progress)")
+}
+.sink(receiveCompletion: { completion in
+    // Handle completion
+}, receiveValue: { (response: UploadResponse) in
+    print("Upload completed: \(response)")
+})
+.store(in: &cancellables)
+```
 
-To run the example app:
+## Customization
 
-1. Open `Examples/ExampleApp/ExampleApp.xcodeproj` in Xcode.
-2. Build and run the app on a simulator or device.
+### Custom Error Handling
+
+Implement the `CustomErrorProtocol` to define your own error types:
+
+```swift
+struct MyErrorType: CustomErrorProtocol {
+    var errorDescription: String
+    // Add other properties as needed
+}
+```
+
+### Retry Handling
+
+Customize retry behavior by implementing the `RetryHandlerProtocol`:
+
+```swift
+class MyRetryHandler: RetryHandlerProtocol {
+    // Implement retry logic
+}
+
+apiClient.set(interceptor: MyRetryHandler())
+```
+
+## Logging
+
+Control logging verbosity:
+
+```swift
+apiClient.setLog(level: .verbose)
+```
+
+## Contributing
+
+Contributions to SRGenericNetworkLayer are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-SRGenericNetworkLayer is released under the MIT license. See [LICENSE](LICENSE) for details.
+SRGenericNetworkLayer is available under the MIT license. See the LICENSE file for more info.

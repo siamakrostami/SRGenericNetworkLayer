@@ -1,10 +1,13 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
     name: "SRGenericNetworkLayer",
     platforms: [
-        .iOS(.v13),  // Specify your minimum deployment target
+        .iOS(.v13),
+        .macOS(.v11),
+        .tvOS(.v13),
+        .watchOS(.v7)  // You can adjust the minimum version as needed
     ],
     products: [
         .library(

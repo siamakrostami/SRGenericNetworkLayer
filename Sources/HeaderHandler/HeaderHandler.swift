@@ -1,65 +1,180 @@
-
 import Foundation
-import UIKit
 
-public enum ConnectionHeaders: String{
-    case
-    keepAlive = "keep-alive",
-    close = "close"
-    public static var name: String{
+// MARK: - ConnectionHeaders
+
+public enum ConnectionHeaders: Sendable {
+    case keepAlive
+    case close
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .keepAlive:
+            return "keep-alive"
+        case .close:
+            return "close"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
+    public static var name: String {
         return "connection"
     }
 }
 
-public enum AcceptHeaders: String{
-    case
-    all = "*/*",
-    applicationJson = "application/json",
-    applicationJsonUTF8 = "application/json; charset=utf-8",
-    text = "text/plain",
-    combinedAll = "application/json, text/plain, */*"
+// MARK: - AcceptHeaders
+
+public enum AcceptHeaders: Sendable {
+    case all
+    case applicationJson
+    case applicationJsonUTF8
+    case text
+    case combinedAll
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .all:
+            return "*/*"
+        case .applicationJson:
+            return "application/json"
+        case .applicationJsonUTF8:
+            return "application/json; charset=utf-8"
+        case .text:
+            return "text/plain"
+        case .combinedAll:
+            return "application/json, text/plain, */*"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
     public static var name: String {
         return "accept"
     }
 }
 
-public enum ContentTypeHeaders: String{
-    case
-    applicationJson = "application/json",
-    applicationJsonUTF8 = "application/json; charset=utf-8",
-    urlEncoded = "application/x-www-form-urlencoded",
-    formData = "multipart/form-data"
+// MARK: - ContentTypeHeaders
+
+public enum ContentTypeHeaders: Sendable {
+    case applicationJson
+    case applicationJsonUTF8
+    case urlEncoded
+    case formData
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .applicationJson:
+            return "application/json"
+        case .applicationJsonUTF8:
+            return "application/json; charset=utf-8"
+        case .urlEncoded:
+            return "application/x-www-form-urlencoded"
+        case .formData:
+            return "multipart/form-data"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
     public static var name: String {
         return "content-type"
     }
 }
 
-public enum AcceptEncodingHeaders: String{
-    case
-    gzip = "gzip",
-    compress = "compress",
-    deflate = "deflate",
-    br = "br",
-    identity = "identity",
-    all = "*"
+// MARK: - AcceptEncodingHeaders
+
+public enum AcceptEncodingHeaders: Sendable {
+    case gzip
+    case compress
+    case deflate
+    case br
+    case identity
+    case all
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .gzip:
+            return "gzip"
+        case .compress:
+            return "compress"
+        case .deflate:
+            return "deflate"
+        case .br:
+            return "br"
+        case .identity:
+            return "identity"
+        case .all:
+            return "*"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
     public static var name: String {
         return "accept-encoding"
     }
 }
 
-public enum AcceptlanguageHeaders: String{
-    case
-    en = "en",
-    fa = "fa",
-    all = "*"
+// MARK: - AcceptLanguageHeaders
+
+public enum AcceptLanguageHeaders: Sendable {
+    case en
+    case fa
+    case all
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .en:
+            return "en"
+        case .fa:
+            return "fa"
+        case .all:
+            return "*"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
     public static var name: String {
         return "accept-language"
     }
 }
 
+// MARK: - AuthorizationType
+
+public enum AuthorizationType: Sendable {
+    case bearer(token: String)
+    case basic(username: String, password: String)
+    case custom(String)
+    
+    public var value: String {
+        switch self {
+        case .bearer(let token):
+            return "Bearer \(token)"
+        case .basic(let username, let password):
+            let credentials = "\(username):\(password)"
+            guard let encodedCredentials = credentials.data(using: .utf8)?.base64EncodedString() else {
+                return ""
+            }
+            return "Basic \(encodedCredentials)"
+        case .custom(let customValue):
+            return customValue
+        }
+    }
+
+    public static var name: String {
+        return "authorization"
+    }
+}
+
 // MARK: - HeaderHandler
 
-public class HeaderHandler {
+public class HeaderHandler: @unchecked Sendable {
     // MARK: Lifecycle
 
     private init() {}
@@ -70,37 +185,37 @@ public class HeaderHandler {
 
     @discardableResult
     public func addContentTypeHeader(type: ContentTypeHeaders) -> HeaderHandler {
-        self.headers.updateValue(type.rawValue, forKey: ContentTypeHeaders.name)
+        self.headers.updateValue(type.value, forKey: ContentTypeHeaders.name)
         return self
     }
 
     @discardableResult
     public func addConnectionHeader(type: ConnectionHeaders) -> HeaderHandler {
-        self.headers.updateValue(type.rawValue, forKey: ConnectionHeaders.name)
+        self.headers.updateValue(type.value, forKey: ConnectionHeaders.name)
         return self
     }
 
     @discardableResult
     public func addAcceptHeaders(type: AcceptHeaders) -> HeaderHandler {
-        self.headers.updateValue(type.rawValue, forKey: AcceptHeaders.name)
+        self.headers.updateValue(type.value, forKey: AcceptHeaders.name)
         return self
     }
 
     @discardableResult
-    public func addAcceptLanguageHeaders(type: AcceptlanguageHeaders) -> HeaderHandler {
-        self.headers.updateValue(type.rawValue, forKey: AcceptlanguageHeaders.name)
+    public func addAcceptLanguageHeaders(type: AcceptLanguageHeaders) -> HeaderHandler {
+        self.headers.updateValue(type.value, forKey: AcceptLanguageHeaders.name)
         return self
     }
 
     @discardableResult
     public func addAcceptEncodingHeaders(type: AcceptEncodingHeaders) -> HeaderHandler {
-        self.headers.updateValue(type.rawValue, forKey: AcceptEncodingHeaders.name)
+        self.headers.updateValue(type.value, forKey: AcceptEncodingHeaders.name)
         return self
     }
 
     @discardableResult
-    public func addAuthorizationHeader(token: String) -> HeaderHandler {
-        self.headers.updateValue("Bearer \(token)", forKey: "authorization")
+    public func addAuthorizationHeader(type: AuthorizationType) -> HeaderHandler {
+        self.headers.updateValue(type.value, forKey: AuthorizationType.name)
         return self
     }
 
