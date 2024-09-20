@@ -163,6 +163,39 @@ Control logging verbosity:
 apiClient.setLog(level: .verbose)
 ```
 
+## Sample SwiftUI App
+
+To help you get started with SRGenericNetworkLayer, we've created a sample SwiftUI app that demonstrates how to use this package in a real-world scenario. The sample app fetches and displays a list of posts from a mock API.
+
+### Features of the Sample App
+
+- Demonstrates setup and usage of `APIClient`
+- Shows how to define API endpoints using `NetworkRouter`
+- Illustrates making network requests and handling responses in SwiftUI
+- Provides an example of basic error handling
+
+### Getting the Sample App
+
+You can find the sample app in the `Examples/SRGenericNetworkLayerSampleApp` directory of this repository. To use it:
+
+1. Clone this repository
+2. Navigate to the `Examples/SRGenericNetworkLayerSampleApp` directory
+3. Open the `SRGenericNetworkLayerSampleApp.xcodeproj` file in Xcode
+4. Run the project
+
+### Structure of the Sample App
+
+The sample app consists of the following key files:
+
+- `ContentView.swift`: Main view displaying the list of posts
+- `PostsViewModel.swift`: View model managing state and network calls
+- `Post.swift`: Model representing a post
+- `PostsAPI.swift`: Definition of the API endpoint for fetching posts
+- `NetworkError.swift`: Custom error type for network errors
+- `SampleApp.swift`: Main app structure
+
+For more details on the sample app, including setup instructions and customization options, please refer to the README file in the `Examples/SRGenericNetworkLayerSampleApp` directory.
+
 ## Contributing
 
 Contributions to SRGenericNetworkLayer are welcome! Please feel free to submit a Pull Request.
