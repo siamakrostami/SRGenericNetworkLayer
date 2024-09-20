@@ -53,10 +53,7 @@ extension LoginService {
         }
 
         var headers: [String: String]? {
-            let header = HeaderHandler.shared
-                .addAcceptHeaders(type: .applicationJson)
-                .addContentTypeHeader(type: .applicationJson)
-                .build()
+            let header = HeaderHandler.shared.addAcceptHeaders(type: .applicationJson).addContentTypeHeader(type: .applicationJson).build()
             return header
         }
 

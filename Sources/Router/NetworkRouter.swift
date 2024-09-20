@@ -1,9 +1,8 @@
-
 import Foundation
 
 // MARK: - RequestMethod
 
-public enum RequestMethod: String {
+public enum RequestMethod: String, Sendable {
     case get
     case post
     case put
@@ -15,51 +14,54 @@ public enum RequestMethod: String {
 
 // MARK: - NetworkRouterError
 
-public enum NetworkRouterError: Error {
+public enum NetworkRouterError: Error, Sendable {
     case invalidURL
     case encodingFailed
 }
 
+// MARK: - EmptyParameters
+
+public struct EmptyParameters: Codable {}
+
 // MARK: - NetworkRouter
 
-public protocol NetworkRouter {
+public protocol NetworkRouter: Sendable {
+    associatedtype Parameters: Codable = EmptyParameters
+    associatedtype QueryParameters: Codable = EmptyParameters
+    
     var baseURLString: String { get }
     var method: RequestMethod? { get }
     var path: String { get }
     var headers: [String: String]? { get }
-    var params: [String: Any]? { get }
-    var queryParams: [String: Any]? { get }
+    var params: Parameters? { get }
+    var queryParams: QueryParameters? { get }
     func asURLRequest() throws -> URLRequest
 }
 
-// MARK: - Network Router Protocols impl
+// MARK: - Network Router Protocol Default Implementation
 
 extension NetworkRouter {
     public var baseURLString: String {
         return ""
     }
 
-    // Add Rout method here
     public var method: RequestMethod? {
         return .none
     }
 
-    // Set APIs'Rout for each case
     public var path: String {
         return ""
     }
 
-    // Set header here
     public var headers: [String: String]? {
         return nil
     }
 
-    // Return each case parameters
-    public var params: [String: Any]? {
+    public var params: Parameters? {
         return nil
     }
 
-    public var queryParams: [String: Any]? {
+    public var queryParams: QueryParameters? {
         return nil
     }
 
@@ -77,24 +79,26 @@ extension NetworkRouter {
 
         // Determine the encoding based on the HTTP method and headers
         switch method {
-        case .delete,
-             .get,
-             .head:
+        case .delete, .get, .head:
             // For GET, DELETE, and HEAD, encode parameters in the query string if any
-            let urlEncoding = URLEncoding(destination: .queryString)
-            try urlEncoding.encode(&urlRequest, with: queryParams)
+            if let queryParams = queryParams {
+                let urlEncoding = URLEncoding(destination: .queryString)
+                try urlEncoding.encode(&urlRequest, with: queryParams)
+            }
         default:
             // For POST, PUT, PATCH, etc., check the content type to decide encoding
-            if let contentType = headers?[ContentTypeHeaders.name], contentType == ContentTypeHeaders.formData.rawValue {
+            if let contentType = headers?[ContentTypeHeaders.name], contentType == ContentTypeHeaders.formData.value {
                 // Use URLEncoding for form-urlencoded content
-                let urlEncoding = URLEncoding(destination: .httpBody)
-                try urlEncoding.encode(&urlRequest, with: params)
+                if let params = params {
+                    let urlEncoding = URLEncoding(destination: .httpBody)
+                    try urlEncoding.encode(&urlRequest, with: params)
+                }
             } else {
                 // Default to JSON encoding
-                if let queryParams, !queryParams.isEmpty {
+                if let queryParams = queryParams {
                     try URLEncoding(destination: .queryString).encode(&urlRequest, with: queryParams)
-                    try JSONEncoding().encode(&urlRequest, with: params)
-                } else {
+                }
+                if let params = params {
                     try JSONEncoding().encode(&urlRequest, with: params)
                 }
             }

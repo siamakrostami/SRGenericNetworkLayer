@@ -1,14 +1,9 @@
-//
-//  CustomErrorProtocol.swift
-//  SRNetworkLayer
-//
-//  Created by Siamak Rostami on 8/10/24.
-//
-
 import Foundation
 
 // MARK: - CustomErrorProtocol
 
-public protocol CustomErrorProtocol: Codable, Error {
+/// A protocol for custom error types.
+public protocol CustomErrorProtocol: Codable, Error, Sendable {
+    /// A description of the error.
     var errorDescription: String { get }
 }

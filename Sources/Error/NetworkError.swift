@@ -1,15 +1,9 @@
-//
-//  NetworkError.swift
-//  SRNetworkLayer
-//
-//  Created by Siamak Rostami on 6/13/24.
-//
-
 import Foundation
 
 // MARK: - NetworkError
 
-public enum NetworkError<ErrorType: CustomErrorProtocol>: Error {
+/// An enum representing various network errors.
+public enum NetworkError<ErrorType: CustomErrorProtocol>: Error, Sendable {
     case unknown
     case urlError(URLError)
     case decodingError(Error)
