@@ -176,11 +176,11 @@ To help you get started with SRGenericNetworkLayer, we've created a sample Swift
 
 ### Getting the Sample App
 
-You can find the sample app in the `Examples/SRGenericNetworkLayerSampleApp` directory of this repository. To use it:
+You can find the sample app in the `Example/SRGenericNetworkLayerExampleApp` directory of this repository. To use it:
 
 1. Clone this repository
-2. Navigate to the `Examples/SRGenericNetworkLayerSampleApp` directory
-3. Open the `SRGenericNetworkLayerSampleApp.xcodeproj` file in Xcode
+2. Navigate to the `Example/SRGenericNetworkLayerExampleApp` directory
+3. Open the `SRGenericNetworkLayerExampleApp.xcodeproj` file in Xcode
 4. Run the project
 
 ### Structure of the Sample App
@@ -192,9 +192,9 @@ The sample app consists of the following key files:
 - `Post.swift`: Model representing a post
 - `PostsAPI.swift`: Definition of the API endpoint for fetching posts
 - `NetworkError.swift`: Custom error type for network errors
-- `SampleApp.swift`: Main app structure
+- `SRGenericNetworkLayerExampleApp.swift`: Main app structure
 
-For more details on the sample app, including setup instructions and customization options, please refer to the README file in the `Examples/SRGenericNetworkLayerSampleApp` directory.
+For more details on the sample app, including setup instructions and customization options, please refer to the README file in the `Examples/SRGenericNetworkLayerExampleApp` directory.
 
 ## Contributing
 
