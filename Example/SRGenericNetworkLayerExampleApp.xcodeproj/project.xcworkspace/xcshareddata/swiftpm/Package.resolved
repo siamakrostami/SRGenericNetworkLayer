@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/siamakrostami/SRGenericNetworkLayer",
       "state" : {
-        "revision" : "1fd66e38b6a5cfebba5ac8ff7d6e5a988a0aa6c1",
-        "version" : "1.0.5"
+        "revision" : "be63b3509a38b08e841768c1fb26c6a5b95045dc",
+        "version" : "1.0.8"
       }
     }
   ],
