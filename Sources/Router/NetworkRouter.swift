@@ -35,6 +35,7 @@ public protocol NetworkRouter: Sendable {
     var headers: [String: String]? { get }
     var params: Parameters? { get }
     var queryParams: QueryParameters? { get }
+    var version: APIVersion? {get}
     func asURLRequest() throws -> URLRequest
 }
 
@@ -64,11 +65,15 @@ extension NetworkRouter {
     public var queryParams: QueryParameters? {
         return nil
     }
+    
+    public var version: APIVersion? {
+        return .v1
+    }
 
     // MARK: URLRequestConvertible
 
     public func asURLRequest() throws -> URLRequest {
-        let fullPath = baseURLString + path
+        let fullPath = baseURLString + (version?.path ?? "") + path
         guard let url = URL(string: fullPath) else {
             throw NetworkRouterError.invalidURL
         }
