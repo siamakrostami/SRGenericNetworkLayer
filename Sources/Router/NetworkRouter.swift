@@ -92,6 +92,7 @@ extension NetworkRouter {
                 if let params = params {
                     let urlEncoding = URLEncoding(destination: .httpBody)
                     try urlEncoding.encode(&urlRequest, with: params)
+                    urlRequest.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
                 }
             } else {
                 // Default to JSON encoding

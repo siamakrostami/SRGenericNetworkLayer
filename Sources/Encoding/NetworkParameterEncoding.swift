@@ -63,7 +63,6 @@ public struct URLEncoding: NetworkParameterEncoding, Sendable {
     private func encodeHttpBody<T: Codable>(_ urlRequest: inout URLRequest, with parameters: T) throws {
         let jsonData = try JSONEncoder().encode(parameters)
         urlRequest.httpBody = jsonData
-        urlRequest.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
     }
 }
 
