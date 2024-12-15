@@ -11,10 +11,10 @@
 import Foundation
 import SRGenericNetworkLayer
 
-struct PostsAPI: NetworkRouter {
-    var baseURLString: String { return "https://jsonplaceholder.typicode.com" }
+struct PostsAPI: NetworkRouter, Sendable {
+    var baseURLString: String { return "https://jsonplaceholder.typicode.com/" }
     var method: RequestMethod? { return .get }
-    var path: String { return "/posts" }
+    var path: String { return "posts" }
     var headers: [String: String]? { return nil }
     var params: Parameters? { return nil }
     var queryParams: QueryParameters? { return nil }
