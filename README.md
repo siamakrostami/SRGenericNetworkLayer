@@ -91,13 +91,13 @@ public protocol SampleRepositoryProtocols: Sendable {
 public final class SampleRepository: Sendable {
     // MARK: Lifecycle
 
-    public init(client: APIClient<ErrorResponse>) {
+    public init(client: APIClient) {
         self.client = client
     }
 
     // MARK: Private
 
-    private let client: APIClient<ErrorResponse>
+    private let client: APIClient
 }
 
 
