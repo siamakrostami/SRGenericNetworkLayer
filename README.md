@@ -42,25 +42,23 @@ The `APIClient` can be initialized in several ways to suit different use cases:
 
 ```swift
 // Basic initialization with default settings
-let defaultClient = APIClient<MyErrorType>()
+let defaultClient = APIClient()
 
 // Initialization with custom QoS (Quality of Service)
-let backgroundClient = APIClient<MyErrorType>(qos: .background)
+let backgroundClient = APIClient(qos: .background)
 
 // Initialization with custom log level
-let verboseClient = APIClient<MyErrorType>(logLevel: .verbose)
+let verboseClient = APIClient(logLevel: .verbose)
 
 // Initialization with both custom QoS and log level
-let customClient = APIClient<MyErrorType>(qos: .userInitiated, logLevel: .standard)
+let customClient = APIClient(qos: .userInitiated, logLevel: .standard)
 
 // Initialization with a custom retry handler
-let retryClient = APIClient<MyErrorType>()
-retryClient.set(interceptor: MyCustomRetryHandler())
+let retryClient = APIClient(interceptor: MyCustomRetryHandler())
 
-// Initialization with custom settings and chained configuration
-let fullyCustomClient = APIClient<MyErrorType>(qos: .userInitiated, logLevel: .minimal)
-    .set(interceptor: MyCustomRetryHandler())
-    .setLog(level: .verbose)
+// Initialization with a custom decoder
+let retryClient = APIClient(decoder: MyCustomDecoder())
+
 ```
 
 ### Defining an API Endpoint
@@ -77,12 +75,139 @@ struct UserAPI: NetworkRouter {
     var params: Parameters? { return UserParameters(id: 123) }
     var queryParams: QueryParameters? { return UserQueryParameters(includeDetails: true) }
 }
+
+OR
+
+
+public protocol SampleRepositoryProtocols: Sendable {
+    func getInvoice(documentID: String) -> AnyPublisher<SomeModel, NetworkError>
+    func getInvoice(documentID: String) async throws -> SomeModel
+    
+    func getReceipt(transactionId: String) -> AnyPublisher<SomeModel, NetworkError>
+    func getReceipt(transactionId: String) async throws -> SomeModel
+}
+
+
+public final class SampleRepository: Sendable {
+    // MARK: Lifecycle
+
+    public init(client: APIClient) {
+        self.client = client
+    }
+
+    // MARK: Private
+
+    private let client: APIClient
+}
+
+
+extension SampleRepository {
+    enum Router: NetworkRouter {
+        case getInvoice(documentID: String)
+        case getReceipt(transactionId: String)
+
+        var path: String {
+            switch self {
+            case .getInvoice(let documentID):
+                return "your/path/\(documentID)"
+            default:
+                return "your/path/\(documentID)"
+            }
+        }
+
+        var method: RequestMethod? {
+            switch self {
+            case .getInvoice:
+                return .get
+            default:
+                return .post
+            }
+        }
+
+        var headers: [String: String]? {
+            var handler = HeaderHandler.shared
+                .addAuthorizationHeader()
+                .addAcceptHeaders(type: .applicationJson)
+                .addDeviceId()
+            
+            switch self {
+            case .getInvoice:
+                break
+            default:
+                handler = handler.addContentTypeHeader(type: .applicationJson)
+            }
+            
+            return handler.build()
+        }
+        
+        var queryParams: SampleRepositoryQueryParamModel? {
+            switch self {
+            case .getInvoice(let trxId):
+                return SampleRepositoryQueryParamModel(trxId: trxId)
+            default:
+                return nil
+            }
+        }
+        
+        var params: SampleRepositoryQueryParamModel? {
+            switch self {
+            case .getInvoice(let documentID):
+                return SampleRepositoryQueryParamModel(
+                    documentId: documentID,
+                    stepId: "Some Id",
+                    subStepId: "Some Id"
+                )
+            default:
+                return nil
+            }
+        }
+    }
+}
+
+
+extension SampleRepository: SampleRepositoryProtocols {
+    public func getInvoice(documentID: String) -> AnyPublisher<SomeModel, NetworkError> {
+        client.request(Router.getInvoice(documentID: documentID))
+    }
+    
+    public func getInvoice(documentID: String) async throws -> SomeModel {
+        try await client.asyncRequest(Router.getInvoice(documentID: documentID))
+    }
+    
+    public func getReceipt(transactionId: String) -> AnyPublisher<SomeModel, NetworkError> {
+        client.request(Router.getReceipt(transactionId: transactionId))
+    }
+    
+    public func getReceipt(transactionId: String) async throws -> SomeModel {
+        try await client.asyncRequest(Router.getReceipt(transactionId: transactionId))
+    }
+}
+
+
+public struct SampleRepositoryQueryParamModel: Codable, Sendable {
+    
+    public init(documentId: String? = nil,
+                stepId: String? = nil,
+                subStepId: String? = nil,
+                trxId: String? = nil) {
+        self.documentId = documentId
+        self.stepId = stepId
+        self.subStepId = subStepId
+        self.trxId = trxId
+    }
+    
+    
+    public let documentId: String?
+    public let stepId: String?
+    public let subStepId: String?
+    public let trxId: String?
+}
 ```
 
 ### Making a Request with Combine
 
 ```swift
-let apiClient = APIClient<MyErrorType>()
+let apiClient = APIClient()
 
 apiClient.request(UserAPI())
     .sink(receiveCompletion: { completion in
@@ -101,7 +226,7 @@ apiClient.request(UserAPI())
 ### Making a Request with async/await
 
 ```swift
-let apiClient = APIClient<MyErrorType>()
+let apiClient = APIClient()
 
 do {
     let response: UserResponse = try await apiClient.asyncRequest(UserAPI())
@@ -114,7 +239,7 @@ do {
 ### File Upload
 
 ```swift
-let apiClient = APIClient<MyErrorType>()
+let apiClient = APIClient()
 
 let fileData = // ... your file data ...
 let endpoint = UploadAPI()
@@ -132,17 +257,6 @@ apiClient.uploadRequest(endpoint, withName: "file", data: fileData) { progress i
 
 ## Customization
 
-### Custom Error Handling
-
-Implement the `CustomErrorProtocol` to define your own error types:
-
-```swift
-struct MyErrorType: CustomErrorProtocol {
-    var errorDescription: String
-    // Add other properties as needed
-}
-```
-
 ### Retry Handling
 
 Customize retry behavior by implementing the `RetryHandlerProtocol`:
@@ -152,17 +266,7 @@ class MyRetryHandler: RetryHandlerProtocol {
     // Implement retry logic
 }
 
-apiClient.set(interceptor: MyRetryHandler())
 ```
-
-## Logging
-
-Control logging verbosity:
-
-```swift
-apiClient.setLog(level: .verbose)
-```
-
 ## Sample SwiftUI App
 
 To help you get started with SRGenericNetworkLayer, we've created a sample SwiftUI app that demonstrates how to use this package in a real-world scenario. The sample app fetches and displays a list of posts from a mock API.
@@ -191,7 +295,6 @@ The sample app consists of the following key files:
 - `PostsViewModel.swift`: View model managing state and network calls
 - `Post.swift`: Model representing a post
 - `PostsAPI.swift`: Definition of the API endpoint for fetching posts
-- `NetworkError.swift`: Custom error type for network errors
 - `SRGenericNetworkLayerExampleApp.swift`: Main app structure
 
 ## Contributing

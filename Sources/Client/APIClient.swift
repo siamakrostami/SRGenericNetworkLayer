@@ -4,9 +4,28 @@ import Foundation
 // MARK: - APIClient
 
 /// A generic client for handling API requests with both Combine and async/await support.
-public final class APIClient<ErrorType: CustomErrorProtocol>: @unchecked
-    Sendable
-{
+public final class APIClient: @unchecked
+Sendable {
+    // MARK: Lifecycle
+
+    // MARK: - Initialization
+
+    /// Initializes a new APIClient instance.
+    /// - Parameters:
+    ///   - qos: The quality of service for the API queue. Default is .background.
+    ///   - logLevel: The initial log level for request/response logging. Default is .none.
+    public init(
+        configuration: URLSessionConfiguration? = nil,
+        qos: DispatchQoS = .background, logLevel: LogLevel = .none, decoder: JSONDecoder? = nil, interceptor: Interceptor? = nil)
+    {
+        self.logLevel = logLevel
+        apiQueue = DispatchQueue(label: "com.apiQueue", qos: qos)
+        self.decoder = decoder ?? JSONDecoder()
+        retryHandler = interceptor ?? Interceptor(numberOfRetries: 0)
+    }
+
+    // MARK: Private
+
     // MARK: - Properties
 
     /// Queue for handling API operations
@@ -18,57 +37,23 @@ public final class APIClient<ErrorType: CustomErrorProtocol>: @unchecked
     private var configuration: URLSessionConfiguration?
 
     /// Retry handler for failed requests
-    private var _retryHandler: Interceptor<ErrorType> = Interceptor<ErrorType>(
-        numberOfRetries: 0)
+    private var _retryHandler: Interceptor?
 
     /// Array to store requests that are to be retried
     private var requestsToRetry: [URLRequest] = []
 
+    private var decoder: JSONDecoder
+
+    private var activeSessions: Set<URLSession> = Set()
+
     /// Thread-safe access to the retry handler
-    private var retryHandler: Interceptor<ErrorType> {
+    private var retryHandler: Interceptor {
         get {
-            return apiQueue.sync { _retryHandler }
+            return apiQueue.sync { _retryHandler ?? .init(numberOfRetries: 0) }
         }
         set {
             apiQueue.sync { _retryHandler = newValue }
         }
-    }
-
-    private var activeSessions: Set<URLSession> = Set()
-
-    // MARK: - Initialization
-
-    /// Initializes a new APIClient instance.
-    /// - Parameters:
-    ///   - qos: The quality of service for the API queue. Default is .background.
-    ///   - logLevel: The initial log level for request/response logging. Default is .none.
-    public init(
-        configuration: URLSessionConfiguration? = nil,
-        qos: DispatchQoS = .background, logLevel: LogLevel = .none
-    ) {
-        self.logLevel = logLevel
-        apiQueue = DispatchQueue(label: "com.apiQueue", qos: qos)
-
-    }
-
-    // MARK: - Configuration Methods
-
-    /// Sets the retry handler for the API client.
-    /// - Parameter interceptor: The interceptor to handle retries.
-    /// - Returns: The APIClient instance for method chaining.
-    @discardableResult
-    public func set(interceptor: Interceptor<ErrorType>) -> Self {
-        retryHandler = interceptor
-        return self
-    }
-
-    /// Sets the log level for request/response logging.
-    /// - Parameter level: The desired log level.
-    /// - Returns: The APIClient instance for method chaining.
-    @discardableResult
-    public func setLog(level: LogLevel) -> Self {
-        self.logLevel = level
-        return self
     }
 }
 
@@ -81,7 +66,7 @@ extension APIClient {
     /// - Parameter endpoint: The NetworkRouter defining the request.
     /// - Returns: A publisher that emits the decoded response or an error.
     public func request<T: Codable>(_ endpoint: any NetworkRouter)
-        -> AnyPublisher<T, NetworkError<ErrorType>>
+        -> AnyPublisher<T, NetworkError>
     {
         guard let urlRequest = try? endpoint.asURLRequest() else {
             return Fail(error: .unknown).eraseToAnyPublisher()
@@ -92,8 +77,8 @@ extension APIClient {
 
     /// Internal method to make the actual network request.
     private func makeRequest<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int
-    ) -> AnyPublisher<T, NetworkError<ErrorType>> {
+        urlRequest: URLRequest, retryCount: Int) -> AnyPublisher<T, NetworkError>
+    {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
 
         let session = configuredSession(configuration: configuration)
@@ -106,16 +91,16 @@ extension APIClient {
                     logLevel: self?.logLevel)
                 guard let httpResponse = output.response as? HTTPURLResponse
                 else {
-                    throw NetworkError<ErrorType>.unknown
+                    throw NetworkError.unknown
                 }
                 if 200..<300 ~= httpResponse.statusCode {
                     return output.data
                 } else {
                     guard
-                        let error = self?.mapErrorResponse(
+                        let error = self?.mapErrorResponseToCustomErrorData(
                             output.data, statusCode: httpResponse.statusCode)
                     else {
-                        throw NetworkError<ErrorType>.unknown
+                        throw NetworkError.unknown
                     }
                     URLSessionLogger.shared.logResponse(
                         output.response, data: output.data, error: error,
@@ -124,19 +109,18 @@ extension APIClient {
                 }
             }
             .decode(type: T.self, decoder: JSONDecoder())
-            .mapError { [weak self] error -> NetworkError<ErrorType> in
+            .mapError { [weak self] error -> NetworkError in
                 URLSessionLogger.shared.logResponse(
                     nil, data: nil, error: error, logLevel: self?.logLevel)
                 return self?.mapErrorToNetworkError(error) ?? .unknown
             }
             .catch {
-                [weak self] error -> AnyPublisher<T, NetworkError<ErrorType>> in
+                [weak self] error -> AnyPublisher<T, NetworkError> in
                 guard let self = self else {
                     return Fail(error: .unknown).eraseToAnyPublisher()
                 }
                 return self.handleRetry(
-                    urlRequest: urlRequest, retryCount: retryCount, error: error
-                )
+                    urlRequest: urlRequest, retryCount: retryCount, error: error)
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
@@ -144,8 +128,8 @@ extension APIClient {
 
     /// Handles retry logic for failed requests.
     private func handleRetry<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int, error: NetworkError<ErrorType>
-    ) -> AnyPublisher<T, NetworkError<ErrorType>> {
+        urlRequest: URLRequest, retryCount: Int, error: NetworkError) -> AnyPublisher<T, NetworkError>
+    {
         if retryCount > 0
             && retryHandler.shouldRetry(request: urlRequest, error: error)
         {
@@ -181,34 +165,35 @@ extension APIClient {
     /// - Returns: A publisher that emits the decoded response or an error.
     public func uploadRequest<T: Codable>(
         _ endpoint: any NetworkRouter, withName: String, data: Data?,
-        progressCompletion: @escaping ProgressHandler
-    ) -> AnyPublisher<T, NetworkError<ErrorType>> {
+        progressCompletion: @escaping ProgressHandler) -> AnyPublisher<T, NetworkError>
+    {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = data
         else {
-            return Fail(error: NetworkError<ErrorType>.unknown)
+            return Fail(error: NetworkError.unknown)
                 .eraseToAnyPublisher()
         }
 
         return makeUploadRequest(
             urlRequest: urlRequest, params: endpoint.params, withName: withName,
-            data: file, progressCompletion: progressCompletion, retryCount: 3
-        )
-        .subscribe(on: apiQueue)
-        .eraseToAnyPublisher()
+            data: file, progressCompletion: progressCompletion, retryCount: 3)
+            .subscribe(on: apiQueue)
+            .eraseToAnyPublisher()
     }
 
     /// Internal method to make the actual upload request.
     private func makeUploadRequest<T: Codable>(
         urlRequest: URLRequest, params: Codable?, withName: String, data: Data,
-        progressCompletion: @escaping ProgressHandler, retryCount: Int
-    ) -> AnyPublisher<T, NetworkError<ErrorType>> {
+        progressCompletion: @escaping ProgressHandler, retryCount: Int) -> AnyPublisher<T, NetworkError>
+    {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
         let (newUrlRequest, bodyData) = createBody(
             urlRequest: urlRequest, parameters: params, data: data,
             filename: withName)
 
-        return Future<Data, NetworkError<ErrorType>> { [weak self] (promise) in
-            guard let self = self else { return }
+        return Future<Data, NetworkError> { [weak self] promise in
+            guard let self = self else {
+                return
+            }
 
             let sendablePromise = SendablePromise(promise)
             let progressDelegate = UploadProgressDelegate()
@@ -217,7 +202,7 @@ extension APIClient {
                 delegate: progressDelegate, configuration: configuration)
 
             let task = session.uploadTask(with: newUrlRequest, from: bodyData) {
-                (data, response, error) in
+                data, response, error in
                 URLSessionLogger.shared.logResponse(
                     response, data: data, error: error, logLevel: self.logLevel)
 
@@ -226,7 +211,7 @@ extension APIClient {
                     sendablePromise.resolve(
                         .failure(self.mapErrorToNetworkError(error)))
                 } else if let httpResponse = response as? HTTPURLResponse,
-                    let responseData = data
+                          let responseData = data
                 {
                     if 200..<300 ~= httpResponse.statusCode {
                         sendablePromise.resolve(.success(responseData))
@@ -236,7 +221,7 @@ extension APIClient {
                             logLevel: self.logLevel)
                         sendablePromise.resolve(
                             .failure(
-                                self.mapErrorResponse(
+                                self.mapErrorResponseToCustomErrorData(
                                     responseData,
                                     statusCode: httpResponse.statusCode)))
                     }
@@ -251,14 +236,14 @@ extension APIClient {
             task.resume()
         }
         .flatMap {
-            [weak self] data -> AnyPublisher<T, NetworkError<ErrorType>> in
+            [weak self] data -> AnyPublisher<T, NetworkError> in
             guard let self = self else {
                 return Fail(error: .unknown).eraseToAnyPublisher()
             }
             return Just(data)
                 .decode(type: T.self, decoder: JSONDecoder())
                 .mapError { self.mapErrorToNetworkError($0) }
-                .catch { error -> AnyPublisher<T, NetworkError<ErrorType>> in
+                .catch { error -> AnyPublisher<T, NetworkError> in
                     self.handleRetry(
                         urlRequest: urlRequest, retryCount: retryCount,
                         error: error)
@@ -281,13 +266,13 @@ extension APIClient {
         async throws -> T
     {
         guard let urlRequest = try? endpoint.asURLRequest() else {
-            throw NetworkError<ErrorType>.unknown
+            throw NetworkError.unknown
         }
 
         return try await withCheckedThrowingContinuation {
             [weak self] continuation in
             guard let self = self else {
-                continuation.resume(throwing: NetworkError<ErrorType>.unknown)
+                continuation.resume(throwing: NetworkError.unknown)
                 return
             }
             apiQueue.async {
@@ -296,11 +281,11 @@ extension APIClient {
                         let result: T = try await self.makeAsyncRequest(
                             urlRequest: urlRequest, retryCount: 3)
                         continuation.resume(returning: result)
-                    } catch let error as NetworkError<ErrorType> {
+                    } catch let error as NetworkError {
                         continuation.resume(throwing: error)
                     } catch {
                         continuation.resume(
-                            throwing: NetworkError<ErrorType>.unknown)
+                            throwing: NetworkError.unknown)
                     }
                 }
             }
@@ -309,8 +294,8 @@ extension APIClient {
 
     /// Internal method to make the actual async network request.
     private func makeAsyncRequest<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int
-    ) async throws -> T {
+        urlRequest: URLRequest, retryCount: Int) async throws -> T
+    {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
 
         let session = configuredSession(configuration: configuration)
@@ -319,7 +304,7 @@ extension APIClient {
             let (data, response) = try await session.data(for: urlRequest)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw NetworkError<ErrorType>.unknown
+                throw NetworkError.unknown
             }
 
             URLSessionLogger.shared.logResponse(
@@ -334,7 +319,7 @@ extension APIClient {
                     throw mapErrorToNetworkError(error)
                 }
             } else {
-                let error = mapErrorResponse(
+                let error = mapErrorResponseToCustomErrorData(
                     data, statusCode: httpResponse.statusCode)
                 throw error
             }
@@ -346,10 +331,10 @@ extension APIClient {
 
     /// Handles retry logic for failed async requests.
     private func handleAsyncRetry<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int, error: Error
-    ) async throws -> T {
+        urlRequest: URLRequest, retryCount: Int, error: Error) async throws -> T
+    {
         let networkError =
-            error as? NetworkError<ErrorType> ?? mapErrorToNetworkError(error)
+            error as? NetworkError ?? mapErrorToNetworkError(error)
 
         return try await withCheckedThrowingContinuation { continuation in
             Task {
@@ -404,17 +389,17 @@ extension APIClient {
     /// - Throws: A NetworkError if the request fails.
     public func asyncUploadRequest<T: Codable>(
         _ endpoint: any NetworkRouter, withName: String, data: Data?,
-        progressCompletion: @escaping ProgressHandler
-    ) async throws -> T {
+        progressCompletion: @escaping ProgressHandler) async throws -> T
+    {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = data
         else {
-            throw NetworkError<ErrorType>.unknown
+            throw NetworkError.unknown
         }
 
         return try await withCheckedThrowingContinuation {
             [weak self] continuation in
             guard let self = self else {
-                continuation.resume(throwing: NetworkError<ErrorType>.unknown)
+                continuation.resume(throwing: NetworkError.unknown)
                 return
             }
             apiQueue.async {
@@ -426,11 +411,11 @@ extension APIClient {
                             progressCompletion: progressCompletion,
                             retryCount: 3)
                         continuation.resume(returning: result)
-                    } catch let error as NetworkError<ErrorType> {
+                    } catch let error as NetworkError {
                         continuation.resume(throwing: error)
                     } catch {
                         continuation.resume(
-                            throwing: NetworkError<ErrorType>.unknown)
+                            throwing: NetworkError.unknown)
                     }
                 }
             }
@@ -440,8 +425,8 @@ extension APIClient {
     /// Internal method to make the actual async upload request.
     private func makeAsyncUploadRequest<T: Codable>(
         urlRequest: URLRequest, params: Codable?, withName: String, data: Data,
-        progressCompletion: @escaping ProgressHandler, retryCount: Int
-    ) async throws -> T {
+        progressCompletion: @escaping ProgressHandler, retryCount: Int) async throws -> T
+    {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
         let (newUrlRequest, bodyData) = createBody(
             urlRequest: urlRequest, parameters: params, data: data,
@@ -457,7 +442,7 @@ extension APIClient {
                 for: newUrlRequest, from: bodyData)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw NetworkError<ErrorType>.unknown
+                throw NetworkError.unknown
             }
 
             URLSessionLogger.shared.logResponse(
@@ -472,7 +457,7 @@ extension APIClient {
                     throw mapErrorToNetworkError(error)
                 }
             } else {
-                let error = mapErrorResponse(
+                let error = mapErrorResponseToCustomErrorData(
                     data, statusCode: httpResponse.statusCode)
                 throw error
             }
@@ -481,7 +466,6 @@ extension APIClient {
                 urlRequest: urlRequest, retryCount: retryCount, error: error)
         }
     }
-
 }
 
 // MARK: - APIClient+CombineStreamRequest
@@ -493,7 +477,7 @@ extension APIClient {
     /// - Parameter endpoint: The NetworkRouter defining the request.
     /// - Returns: A publisher that emits decoded responses as they arrive or an error.
     public func streamRequest<T: Codable>(_ endpoint: any NetworkRouter)
-        -> AnyPublisher<T, NetworkError<ErrorType>>
+        -> AnyPublisher<T, NetworkError>
     {
         guard let urlRequest = try? endpoint.asURLRequest() else {
             return Fail(error: .unknown).eraseToAnyPublisher()
@@ -504,7 +488,7 @@ extension APIClient {
 
     /// Internal method to make the actual streaming network request.
     private func makeStreamRequest<T: Codable>(urlRequest: URLRequest)
-        -> AnyPublisher<T, NetworkError<ErrorType>>
+        -> AnyPublisher<T, NetworkError>
     {
         let sessionDelegate = StreamingSessionDelegate<T>()
         sessionDelegate.logLevel = logLevel
@@ -539,8 +523,8 @@ private class StreamingSessionDelegate<T: Codable>: NSObject,
     // Handle data received
     func urlSession(
         _ session: URLSession, dataTask: URLSessionDataTask,
-        didReceive data: Data
-    ) {
+        didReceive data: Data)
+    {
         dataBuffer.append(data)
 
         while let range = dataBuffer.range(of: Data("\n".utf8)) {
@@ -563,8 +547,8 @@ private class StreamingSessionDelegate<T: Codable>: NSObject,
     // Handle errors and completion
     func urlSession(
         _ session: URLSession, task: URLSessionTask,
-        didCompleteWithError error: Error?
-    ) {
+        didCompleteWithError error: Error?)
+    {
         if let error = error {
             URLSessionLogger.shared.logResponse(
                 nil, data: nil, error: error, logLevel: logLevel)
@@ -593,10 +577,8 @@ extension APIClient {
     // MARK: - Error Handling
 
     /// Maps a general Error to a NetworkError.
-    private func mapErrorToNetworkError(_ error: Error) -> NetworkError<
-        ErrorType
-    > {
-        if let networkError = error as? NetworkError<ErrorType> {
+    private func mapErrorToNetworkError(_ error: Error) -> NetworkError {
+        if let networkError = error as? NetworkError {
             return networkError
         }
         switch error {
@@ -605,33 +587,16 @@ extension APIClient {
         case let decodingError as DecodingError:
             return .decodingError(decodingError)
         default:
-            return .unknown
+            return .responseError(error)
         }
     }
 
     /// Maps an error response to a NetworkError.
-    private func mapErrorResponse(_ data: Data, statusCode: Int)
-        -> NetworkError<ErrorType>
+    private func mapErrorResponseToCustomErrorData(_ data: Data, statusCode: Int)
+        -> NetworkError
     {
-        do {
-            let errorResponse = try JSONDecoder().decode(
-                ErrorType.self, from: data)
-            return .customError(errorResponse)
-        } catch {
-            // If we can't decode the custom error type, we'll create a default ErrorResponse
-            let defaultError = GeneralErrorResponse(
-                code: statusCode,
-                details: String(data: data, encoding: .utf8)
-                    ?? "No details available",
-                message: HTTPURLResponse.localizedString(
-                    forStatusCode: statusCode),
-                path: "",
-                timestamp: ISO8601DateFormatter().string(from: Date())
-            )
-            return .customError(defaultError as! ErrorType)
-        }
+        return .customError(statusCode, data)
     }
-
 }
 
 // MARK: - APIClient+AsyncStreamRequest
@@ -648,7 +613,7 @@ extension APIClient {
     {
         guard let urlRequest = try? endpoint.asURLRequest() else {
             return AsyncThrowingStream { continuation in
-                continuation.finish(throwing: NetworkError<ErrorType>.unknown)
+                continuation.finish(throwing: NetworkError.unknown)
             }
         }
 
@@ -662,7 +627,7 @@ extension APIClient {
     {
         return AsyncThrowingStream { [weak self] continuation in
             guard let self = self else {
-                continuation.finish(throwing: NetworkError<ErrorType>.unknown)
+                continuation.finish(throwing: NetworkError.unknown)
                 return
             }
 
@@ -674,8 +639,7 @@ extension APIClient {
                     let (bytes, response) = try await session.bytes(
                         for: urlRequest)
                     URLSessionLogger.shared.logResponse(
-                        response, data: nil, error: nil, logLevel: self.logLevel
-                    )
+                        response, data: nil, error: nil, logLevel: self.logLevel)
 
                     var iterator = bytes.makeAsyncIterator()
                     var dataBuffer = Data()
@@ -683,8 +647,7 @@ extension APIClient {
                     while let chunk = try await iterator.next() {
                         dataBuffer.append(chunk)
 
-                        while let range = dataBuffer.range(of: Data("\n".utf8))
-                        {
+                        while let range = dataBuffer.range(of: Data("\n".utf8)) {
                             let lineData = dataBuffer.subdata(
                                 in: dataBuffer.startIndex..<range.lowerBound)
                             dataBuffer.removeSubrange(
@@ -737,8 +700,8 @@ extension APIClient {
     /// Configures and returns a URLSession.
     private func configuredSession(
         delegate: URLSessionDelegate? = nil,
-        configuration: URLSessionConfiguration? = nil
-    ) -> URLSession {
+        configuration: URLSessionConfiguration? = nil) -> URLSession
+    {
         guard let configuration else {
             let configuration = URLSessionConfiguration.default
             configuration.timeoutIntervalForRequest = 120
@@ -750,15 +713,14 @@ extension APIClient {
                 delegateQueue: nil)
         }
         return URLSession(
-            configuration: configuration, delegate: delegate, delegateQueue: nil
-        )
+            configuration: configuration, delegate: delegate, delegateQueue: nil)
     }
 
     /// Creates the body for a multipart form data request.
     private func createBody(
         urlRequest: URLRequest, parameters: Codable?, data: Data,
-        filename: String
-    ) -> (URLRequest, Data) {
+        filename: String) -> (URLRequest, Data)
+    {
         var newUrlRequest = urlRequest
         let boundary = "Boundary-\(UUID().uuidString)"
         let mime = MimeTypeDetector.detectMimeType(from: data)
@@ -799,9 +761,10 @@ extension APIClient {
         return (newUrlRequest, body)
     }
 }
-// MARK: - Session Management
-extension APIClient {
 
+// MARK: - Session Management
+
+extension APIClient {
     private func trackSession(_ session: URLSession) {
         apiQueue.async(flags: .barrier) {
             self.activeSessions.insert(session)

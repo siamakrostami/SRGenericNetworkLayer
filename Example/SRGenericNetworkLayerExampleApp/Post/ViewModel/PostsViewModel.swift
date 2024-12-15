@@ -18,7 +18,7 @@ class PostsViewModel: ObservableObject {
     @Published var errorMessage = ""
     
     private var cancellables = Set<AnyCancellable>()
-    private let apiClient = APIClient<CustomError>().setLog(level: .verbose)
+    private let apiClient = APIClient(logLevel: .verbose)
     
     //MARK: - Combine API Call
 //    func fetchPosts() {
@@ -39,12 +39,13 @@ class PostsViewModel: ObservableObject {
 //    }
     
     //MARK: - Async API Call
+    @MainActor
     func fetchPosts(){
         Task{
             do{
                 let response: [Post] = try await apiClient.asyncRequest(PostsAPI())
                 self.posts = response
-            }catch let error as NetworkError<CustomError>{
+            }catch let error as NetworkError{
                 self.showError = true
                 self.errorMessage = error.localizedErrorDescription ?? ""
             }

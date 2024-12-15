@@ -11,6 +11,9 @@
 public enum APIVersion: String, Sendable {
     case v1
     case v2
+    case v3
+    case v4
+    case v5
 
     // MARK: Internal
 

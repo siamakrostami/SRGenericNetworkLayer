@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		017913272C9E03C20011B237 /* SRGenericNetworkLayer in Frameworks */ = {isa = PBXBuildFile; productRef = 017913262C9E03C20011B237 /* SRGenericNetworkLayer */; };
+		013C3FFA2D0F293A005A407B /* SRGenericNetworkLayer in Frameworks */ = {isa = PBXBuildFile; productRef = 013C3FF92D0F293A005A407B /* SRGenericNetworkLayer */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				017913272C9E03C20011B237 /* SRGenericNetworkLayer in Frameworks */,
+				013C3FFA2D0F293A005A407B /* SRGenericNetworkLayer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +70,7 @@
 			);
 			name = SRGenericNetworkLayerExampleApp;
 			packageProductDependencies = (
-				017913262C9E03C20011B237 /* SRGenericNetworkLayer */,
+				013C3FF92D0F293A005A407B /* SRGenericNetworkLayer */,
 			);
 			productName = SRGenericNetworkLayerExampleApp;
 			productReference = 017913072C9E03770011B237 /* SRGenericNetworkLayerExampleApp.app */;
@@ -101,7 +101,7 @@
 			mainGroup = 017912FE2C9E03770011B237;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				017913252C9E03C20011B237 /* XCRemoteSwiftPackageReference "SRGenericNetworkLayer" */,
+				013C3FF82D0F293A005A407B /* XCLocalSwiftPackageReference "../../SRGenericNetworkLayer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 017913082C9E03770011B237 /* Products */;
@@ -332,21 +332,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		017913252C9E03C20011B237 /* XCRemoteSwiftPackageReference "SRGenericNetworkLayer" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/siamakrostami/SRGenericNetworkLayer";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.5;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		013C3FF82D0F293A005A407B /* XCLocalSwiftPackageReference "../../SRGenericNetworkLayer" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../SRGenericNetworkLayer;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		017913262C9E03C20011B237 /* SRGenericNetworkLayer */ = {
+		013C3FF92D0F293A005A407B /* SRGenericNetworkLayer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 017913252C9E03C20011B237 /* XCRemoteSwiftPackageReference "SRGenericNetworkLayer" */;
 			productName = SRGenericNetworkLayer;
 		};
 /* End XCSwiftPackageProductDependency section */

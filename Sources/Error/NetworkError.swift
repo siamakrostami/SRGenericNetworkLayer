@@ -3,12 +3,12 @@ import Foundation
 // MARK: - NetworkError
 
 /// An enum representing various network errors.
-public enum NetworkError<ErrorType: CustomErrorProtocol>: Error, Sendable {
+public enum NetworkError: Error, Sendable {
     case unknown
     case urlError(URLError)
     case decodingError(Error)
-    case customError(ErrorType)
-    case responseError(Int, Data)
+    case customError(Int,Data)
+    case responseError(Error)
 }
 
 // MARK: LocalizedError
@@ -20,12 +20,12 @@ extension NetworkError: LocalizedError {
             return error.localizedDescription
         case .decodingError(let error):
             return error.localizedDescription
-        case .customError(let error):
-            return error.errorDescription
+        case .customError(_,_):
+            return self.localizedDescription
+        case .responseError(let error):
+            return error.localizedDescription
         case .unknown:
-            return GeneralErrorResponse.unknown().errorDescription
-        default:
-            return nil
+            return self.localizedDescription
         }
     }
 }

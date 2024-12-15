@@ -23,7 +23,6 @@ let package = Package(
                 "SRGenericNetworkLayer",
                 "HeaderHandler",
                 "Encoding",
-                "CustomError",
                 "Log",
                 "Mime",
                 "Error",
