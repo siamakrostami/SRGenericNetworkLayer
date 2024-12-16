@@ -5,6 +5,13 @@
 
 ---
 
+![Platform](https://img.shields.io/badge/platform-iOS-blue)
+![Swift](https://img.shields.io/badge/swift-5.8-orange)
+![License](https://img.shields.io/github/license/siamakrostami/SRNetworkManager)
+![Version](https://img.shields.io/github/v/tag/siamakrostami/SRNetworkManager?label=version)
+![Build](https://github.com/siamakrostami/SRNetworkManager/actions/workflows/ios.yml/badge.svg)
+
+
 ## 🎯 **Features**
 
 - 🔗 **Generic API Client** for various types of network requests
