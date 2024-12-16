@@ -1,5 +1,5 @@
 import XCTest
-@testable import SRGenericNetworkLayer // Replace with your actual module name
+@testable import SRNetworkManager // Replace with your actual module name
 
 final class NetworkRouterTests: XCTestCase {
         // MARK: - Mock Router

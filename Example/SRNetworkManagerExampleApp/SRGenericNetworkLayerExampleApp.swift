@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct SRGenericNetworkLayerExampleAppApp: App {
+struct SRGenericNetworkLayerExampleApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

@@ -10,7 +10,7 @@
 
 import Foundation
 import Combine
-import SRGenericNetworkLayer
+import SRNetworkManager
 
 class PostsViewModel: ObservableObject {
     @Published var posts: [Post] = []

@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SRGenericNetworkLayer",
+    name: "SRNetworkManager",
     platforms: [
         .iOS(.v13),
         .macOS(.v11),
@@ -11,16 +11,16 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "SRGenericNetworkLayer",
-            targets: ["SRGenericNetworkLayer"]
+            name: "SRNetworkManager",
+            targets: ["SRNetworkManager"]
         ),
     ],
     targets: [
         .target(
-            name: "SRGenericNetworkLayer",
+            name: "SRNetworkManager",
             path: "Sources",
             sources: [
-                "SRGenericNetworkLayer",
+                "SRNetworkManager",
                 "HeaderHandler",
                 "Encoding",
                 "Log",
@@ -33,9 +33,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "SRGenericNetworkLayerTests",
-            dependencies: ["SRGenericNetworkLayer"],
-            path: "Tests/SRGenericNetworkLayerTests"
+            name: "SRNetworkManagerTests",
+            dependencies: ["SRNetworkManager"],
+            path: "Tests/SRNetworkManagerTests"
         ),
     ],
     swiftLanguageModes: [.v5,.v6]

@@ -1,67 +1,78 @@
-# SRGenericNetworkLayer
 
-SRGenericNetworkLayer is a powerful and flexible networking layer for Swift applications. It provides a generic, protocol-oriented approach to handling API requests, supporting both Combine and async/await paradigms. This package is designed to be easy to use, highly customizable, and compatible with Swift 6 and the Sendable protocol.
+# SRNetworkManager 🚀
 
-## Features
+**SRNetworkManager** is a **powerful** and **flexible networking layer** for Swift applications. It provides a **generic, protocol-oriented** approach to handling API requests, supporting both **Combine** and **async/await** paradigms. This package is designed to be **easy to use**, **highly customizable**, and **fully compatible** with **Swift 6** and the **Sendable protocol**.
 
-- Generic API client supporting various types of network requests
-- Protocol-oriented design for easy customization and extensibility
-- Support for both Combine and async/await
-- Robust error handling with custom error types
-- Retry mechanism for failed requests
-- File upload support with progress tracking
-- Flexible parameter encoding (URL and JSON)
-- Comprehensive logging system
-- MIME type detection for file uploads
-- Thread-safe design with Sendable protocol support
-- Swift 6 compatible
+---
 
-## Requirements
+## 🎯 **Features**
 
-- iOS 13.0+ / macOS 10.15+
-- Swift 5.5+
-- Xcode 13.0+
+- 🔗 **Generic API Client** for various types of network requests
+- 🧩 **Protocol-Oriented Design** for easy customization and extensibility
+- ⚡ **Support for Combine & async/await**
+- 🛡️ **Robust Error Handling** with custom error types
+- 🔄 **Retry Mechanism** for failed requests
+- 📤 **File Upload Support** with progress tracking
+- 🔧 **Flexible Parameter Encoding** (URL & JSON)
+- 🧾 **Comprehensive Logging System**
+- 📦 **MIME Type Detection** for file uploads
+- 🔒 **Thread-Safe Design** with Sendable protocol support
+- 🚀 **Swift 6 Compatibility**
 
-## Installation
+---
 
-### Swift Package Manager
+## 📋 **Requirements**
 
+- **iOS 13.0+ / macOS 10.15+**
+- **Swift 5.5+**
+- **Xcode 13.0+**
+
+---
+
+## 📦 **Installation**
+
+### Swift Package Manager (SPM)
 Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/siamakrostami/SRGenericNetworkLayer.git", from: "1.0.0")
+    .package(url: "https://github.com/siamakrostami/SRNetworkManager.git", from: "1.0.0")
 ]
 ```
 
-## Usage
+Or use **Xcode:**
+1. Go to **File > Add Packages...**
+2. Search for:
+   ```
+   https://github.com/siamakrostami/SRNetworkManager.git
+   ```
+3. Select the latest version and add it to your project.
+
+---
+
+## 📚 **Usage**
 
 ### Initializing APIClient
 
-The `APIClient` can be initialized in several ways to suit different use cases:
-
 ```swift
-// Basic initialization with default settings
-let client = APIClient()
 
-// Initialization with custom QoS (Quality of Service)
-let client = APIClient(qos: .background)
+let client = APIClient() // Basic initialization with default settings
 
-// Initialization with custom log level
-let client = APIClient(logLevel: .verbose)
+let client = APIClient(qos: .background) // Initialization with custom QoS (Quality of Service)
 
-// Initialization with both custom QoS and log level
-let client = APIClient(qos: .userInitiated, logLevel: .standard)
+let client = APIClient(logLevel: .verbose) // Initialization with custom log level
 
-// Initialization with a custom retry handler
-let client = APIClient(retryHandler: MyCustomRetryHandler())
+let client = APIClient(qos: .userInitiated, logLevel: .standard) // Initialization with both custom QoS and log level
 
-// Initialization with a custom decoder
-let client = APIClient(decoder: MyCustomDecoder())
+let client = APIClient(retryHandler: MyCustomRetryHandler()) // Initialization with a custom retry handler
+
+let client = APIClient(decoder: MyCustomDecoder()) // Initialization with a custom decoder
 
 ```
 
-### Defining an API Endpoint
+---
+
+### Defining an API Endpoint 🌐
 
 ```swift
 struct UserAPI: NetworkRouter {
@@ -75,10 +86,11 @@ struct UserAPI: NetworkRouter {
     var params: Parameters? { UserParameters(id: 123) }
     var queryParams: QueryParameters? { UserQueryParameters(includeDetails: true) }
 }
+```
 
-OR
+Or 
 
-
+```swift
 public protocol SampleRepositoryProtocols: Sendable {
     func getInvoice(documentID: String) -> AnyPublisher<SomeModel, NetworkError>
     func getInvoice(documentID: String) async throws -> SomeModel
@@ -204,7 +216,24 @@ public struct SampleRepositoryQueryParamModel: Codable, Sendable {
 }
 ```
 
-### Making a Request with Combine
+---
+
+### Making a Request (async/await) ⚡
+
+```swift
+Task {
+    do {
+        let user: UserAPI = try await client.asyncRequest(UserAPI())
+        print("Received user: \(user)")
+    } catch {
+        print("Request failed: \(error)")
+    }
+}
+```
+
+---
+
+### Making a Request (Combine) 🔗
 
 ```swift
 let apiClient = APIClient()
@@ -223,20 +252,9 @@ apiClient.request(UserAPI())
     .store(in: &cancellables)
 ```
 
-### Making a Request with async/await
+---
 
-```swift
-let apiClient = APIClient()
-
-do {
-    let response: UserResponse = try await apiClient.asyncRequest(UserAPI())
-    print("Received user: \(response)")
-} catch {
-    print("Request failed with error: \(error)")
-}
-```
-
-### File Upload
+### File Upload 📤
 
 ```swift
 let apiClient = APIClient()
@@ -255,52 +273,58 @@ apiClient.uploadRequest(endpoint, withName: "file", data: fileData) { progress i
 .store(in: &cancellables)
 ```
 
-## Customization
+---
 
-### Retry Handling
+## 🔧 **Customization**
 
-Customize retry behavior by implementing the `RetryHandlerProtocol`:
+### Retry Handling 🔄
 
 ```swift
-class MyRetryHandler: RetryHandlerProtocol {
-    // Implement retry logic
+struct CustomRetryHandler: RetryHandler {
+    // MARK: Lifecycle
+
+    init(numberOfRetries: Int) {
+        self.numberOfRetries = numberOfRetries
+    }
+
+    // MARK: Public
+
+    let numberOfRetries: Int
+
+    func shouldRetry(request: URLRequest, error: NetworkError) -> Bool {}
+
+    func modifyRequestForRetry(client: APIClient, request: URLRequest, error: NetworkError) -> (URLRequest, NetworkError?) {}
 }
-
 ```
-## Sample SwiftUI App
 
-To help you get started with SRGenericNetworkLayer, we've created a sample SwiftUI app that demonstrates how to use this package in a real-world scenario. The sample app fetches and displays a list of posts from a mock API.
+---
 
-### Features of the Sample App
+## 📱 **Sample SwiftUI App**
 
-- Demonstrates setup and usage of `APIClient`
-- Shows how to define API endpoints using `NetworkRouter`
-- Illustrates making network requests and handling responses in SwiftUI
-- Provides an example of basic error handling
+To help you get started with **SRNetworkManager**, we've created a sample SwiftUI app that demonstrates how to use this package in a real-world scenario.
 
-### Getting the Sample App
+### 🎨 **Features of the Sample App**
+- Setup and usage of `APIClient`
+- Defining API endpoints using `NetworkRouter`
+- Making network requests and handling responses in SwiftUI
+- Basic error handling
 
-You can find the sample app in the `Example/SRGenericNetworkLayerExampleApp` directory of this repository. To use it:
+### 🚀 **Getting the Sample App**
+1. Clone this repository.
+2. Navigate to the `Example/SRNetworkManagerExampleApp` directory.
+3. Open `SRNetworkManagerExampleApp.xcodeproj` in Xcode.
+4. Run the project.
 
-1. Clone this repository
-2. Navigate to the `Example/SRGenericNetworkLayerExampleApp` directory
-3. Open the `SRGenericNetworkLayerExampleApp.xcodeproj` file in Xcode
-4. Run the project
+---
 
-### Structure of the Sample App
+## 🤝 **Contributing**
+We welcome contributions! Please feel free to submit a Pull Request.
 
-The sample app consists of the following key files:
+---
 
-- `ContentView.swift`: Main view displaying the list of posts
-- `PostsViewModel.swift`: View model managing state and network calls
-- `Post.swift`: Model representing a post
-- `PostsAPI.swift`: Definition of the API endpoint for fetching posts
-- `SRGenericNetworkLayerExampleApp.swift`: Main app structure
+## 📄 **License**
+**SRNetworkManager** is available under the **MIT license**. See the [LICENSE](LICENSE) file for more details.
 
-## Contributing
+---
 
-Contributions to SRGenericNetworkLayer are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-SRGenericNetworkLayer is available under the MIT license. See the LICENSE file for more info.
+Let me know if you’d like additional sections or specific customizations! 🚀

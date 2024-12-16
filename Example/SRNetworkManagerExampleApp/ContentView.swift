@@ -2,7 +2,7 @@
 
 import SwiftUI
 import Combine
-import SRGenericNetworkLayer
+import SRNetworkManager
 
 struct ContentView: View {
     @StateObject private var viewModel = PostsViewModel()
