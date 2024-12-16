@@ -42,22 +42,22 @@ The `APIClient` can be initialized in several ways to suit different use cases:
 
 ```swift
 // Basic initialization with default settings
-let defaultClient = APIClient()
+let client = APIClient()
 
 // Initialization with custom QoS (Quality of Service)
-let backgroundClient = APIClient(qos: .background)
+let client = APIClient(qos: .background)
 
 // Initialization with custom log level
-let verboseClient = APIClient(logLevel: .verbose)
+let client = APIClient(logLevel: .verbose)
 
 // Initialization with both custom QoS and log level
-let customClient = APIClient(qos: .userInitiated, logLevel: .standard)
+let client = APIClient(qos: .userInitiated, logLevel: .standard)
 
 // Initialization with a custom retry handler
-let retryClient = APIClient(interceptor: MyCustomRetryHandler())
+let client = APIClient(retryHandler: MyCustomRetryHandler())
 
 // Initialization with a custom decoder
-let retryClient = APIClient(decoder: MyCustomDecoder())
+let client = APIClient(decoder: MyCustomDecoder())
 
 ```
 
@@ -68,12 +68,12 @@ struct UserAPI: NetworkRouter {
     typealias Parameters = UserParameters
     typealias QueryParameters = UserQueryParameters
 
-    var baseURLString: String { return "https://api.example.com" }
-    var method: RequestMethod? { return .get }
-    var path: String { return "/users" }
-    var headers: [String: String]? { return HeaderHandler.shared.addAcceptHeaders(type: .applicationJson).addContentTypeHeader(type: .applicationJson).build() }
-    var params: Parameters? { return UserParameters(id: 123) }
-    var queryParams: QueryParameters? { return UserQueryParameters(includeDetails: true) }
+    var baseURLString: String { "https://api.example.com" }
+    var method: RequestMethod? { .get }
+    var path: String { "/users" }
+    var headers: [String: String]? { HeaderHandler.shared.addAcceptHeaders(type: .applicationJson).addContentTypeHeader(type: .applicationJson).build() }
+    var params: Parameters? { UserParameters(id: 123) }
+    var queryParams: QueryParameters? { UserQueryParameters(includeDetails: true) }
 }
 
 OR
