@@ -67,7 +67,7 @@ extension NetworkRouter {
     }
     
     public var version: APIVersion? {
-        return .v1
+        return nil
     }
 
     // MARK: URLRequestConvertible
