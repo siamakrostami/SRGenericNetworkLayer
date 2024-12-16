@@ -1,4 +1,4 @@
-name: iOS CI/CD
+name: Swift Package CI
 
 on:
   push:
@@ -18,32 +18,23 @@ jobs:
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: '15.2'  # Latest Xcode version
+        xcode-version: '15.2' # Latest Xcode version
 
-    - name: Install Dependencies
-      run: |
-        brew install swiftlint  # Optional for linting
-
-    - name: Build the Project
+    - name: Build the Swift Package
       run: |
         xcodebuild clean build \
-        -project SRNetworkManager.xcodeproj \
         -scheme SRNetworkManager \
-        -sdk iphonesimulator \
         -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=18.2" \
         -quiet
 
-
-    - name: Run Unit Tests
+    - name: Run Tests
       run: |
         xcodebuild test \
-        -workspace SRNetworkManager.xcworkspace \
         -scheme SRNetworkManager \
-        -sdk iphonesimulator \
         -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=18.2" \
         -enableCodeCoverage YES
 
     - name: Lint Code
       run: |
-        swiftlint || echo "SwiftLint warnings found, but build will continue."
-
+        brew install swiftlint || echo "SwiftLint already installed"
+        swiftlint || echo "SwiftLint found warnings"
