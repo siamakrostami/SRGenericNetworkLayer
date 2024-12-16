@@ -7,7 +7,7 @@ let package = Package(
         .iOS(.v13),
         .macOS(.v11),
         .tvOS(.v13),
-        .watchOS(.v7)  // You can adjust the minimum version as needed
+        .watchOS(.v7)
     ],
     products: [
         .library(
@@ -30,6 +30,14 @@ let package = Package(
                 "UploadProgress",
                 "Router",
                 "Data"
+            ],
+            swiftSettings: [
+                .define("SPM_SWIFT_6", .when(platforms: nil, configuration: nil)),
+                .define("SPM_SWIFT_5", .when(platforms: nil, configuration: nil)),
+                // Specific Swift 5.x version flags for finer control
+                .define("SPM_SWIFT_5_9", .when(platforms: nil, configuration: nil)),
+                .define("SPM_SWIFT_5_8", .when(platforms: nil, configuration: nil)),
+                .define("SPM_SWIFT_5_7", .when(platforms: nil, configuration: nil))
             ]
         ),
         .testTarget(
@@ -37,6 +45,12 @@ let package = Package(
             dependencies: ["SRNetworkManager"],
             path: "Tests/SRNetworkManagerTests"
         ),
-    ],
-    swiftLanguageModes: [.v5,.v6]
+    ]
 )
+
+// Swift version compatibility check
+#if swift(>=6.0)
+package.swiftLanguageVersions = [.v6, .v5]
+#else
+package.swiftLanguageVersions = [.v5]
+#endif
