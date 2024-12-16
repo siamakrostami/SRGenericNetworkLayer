@@ -5,7 +5,8 @@ import Foundation
 
 /// A generic client for handling API requests with both Combine and async/await support.
 public final class APIClient: @unchecked
-Sendable {
+    Sendable
+{
     // MARK: Lifecycle
 
     // MARK: - Initialization
@@ -16,12 +17,17 @@ Sendable {
     ///   - logLevel: The initial log level for request/response logging. Default is .none.
     public init(
         configuration: URLSessionConfiguration? = nil,
-        qos: DispatchQoS = .background, logLevel: LogLevel = .none, decoder: JSONDecoder? = nil, interceptor: Interceptor? = nil)
-    {
+        qos: DispatchQoS = .background,
+        logLevel: LogLevel = .none,
+        decoder: JSONDecoder? = nil,
+        retryHandler: RetryHandler? = nil
+    ) {
         self.logLevel = logLevel
-        apiQueue = DispatchQueue(label: "com.apiQueue", qos: qos)
+        self.apiQueue = DispatchQueue(label: "com.apiQueue", qos: qos)
         self.decoder = decoder ?? JSONDecoder()
-        retryHandler = interceptor ?? Interceptor(numberOfRetries: 0)
+        self._retryHandler =
+            retryHandler ?? DefaultRetryHandler(numberOfRetries: 0)
+        self.configuration = configuration
     }
 
     // MARK: Private
@@ -37,7 +43,7 @@ Sendable {
     private var configuration: URLSessionConfiguration?
 
     /// Retry handler for failed requests
-    private var _retryHandler: Interceptor?
+    private var _retryHandler: RetryHandler?
 
     /// Array to store requests that are to be retried
     private var requestsToRetry: [URLRequest] = []
@@ -47,9 +53,11 @@ Sendable {
     private var activeSessions: Set<URLSession> = Set()
 
     /// Thread-safe access to the retry handler
-    private var retryHandler: Interceptor {
+    private var retryHandler: RetryHandler {
         get {
-            return apiQueue.sync { _retryHandler ?? .init(numberOfRetries: 0) }
+            return apiQueue.sync {
+                _retryHandler ?? DefaultRetryHandler(numberOfRetries: 0)
+            }
         }
         set {
             apiQueue.sync { _retryHandler = newValue }
@@ -77,8 +85,8 @@ extension APIClient {
 
     /// Internal method to make the actual network request.
     private func makeRequest<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int) -> AnyPublisher<T, NetworkError>
-    {
+        urlRequest: URLRequest, retryCount: Int
+    ) -> AnyPublisher<T, NetworkError> {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
 
         let session = configuredSession(configuration: configuration)
@@ -120,7 +128,8 @@ extension APIClient {
                     return Fail(error: .unknown).eraseToAnyPublisher()
                 }
                 return self.handleRetry(
-                    urlRequest: urlRequest, retryCount: retryCount, error: error)
+                    urlRequest: urlRequest, retryCount: retryCount, error: error
+                )
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
@@ -128,8 +137,8 @@ extension APIClient {
 
     /// Handles retry logic for failed requests.
     private func handleRetry<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int, error: NetworkError) -> AnyPublisher<T, NetworkError>
-    {
+        urlRequest: URLRequest, retryCount: Int, error: NetworkError
+    ) -> AnyPublisher<T, NetworkError> {
         if retryCount > 0
             && retryHandler.shouldRetry(request: urlRequest, error: error)
         {
@@ -165,8 +174,8 @@ extension APIClient {
     /// - Returns: A publisher that emits the decoded response or an error.
     public func uploadRequest<T: Codable>(
         _ endpoint: any NetworkRouter, withName: String, data: Data?,
-        progressCompletion: @escaping ProgressHandler) -> AnyPublisher<T, NetworkError>
-    {
+        progressCompletion: @escaping ProgressHandler
+    ) -> AnyPublisher<T, NetworkError> {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = data
         else {
             return Fail(error: NetworkError.unknown)
@@ -175,16 +184,17 @@ extension APIClient {
 
         return makeUploadRequest(
             urlRequest: urlRequest, params: endpoint.params, withName: withName,
-            data: file, progressCompletion: progressCompletion, retryCount: 3)
-            .subscribe(on: apiQueue)
-            .eraseToAnyPublisher()
+            data: file, progressCompletion: progressCompletion, retryCount: 3
+        )
+        .subscribe(on: apiQueue)
+        .eraseToAnyPublisher()
     }
 
     /// Internal method to make the actual upload request.
     private func makeUploadRequest<T: Codable>(
         urlRequest: URLRequest, params: Codable?, withName: String, data: Data,
-        progressCompletion: @escaping ProgressHandler, retryCount: Int) -> AnyPublisher<T, NetworkError>
-    {
+        progressCompletion: @escaping ProgressHandler, retryCount: Int
+    ) -> AnyPublisher<T, NetworkError> {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
         let (newUrlRequest, bodyData) = createBody(
             urlRequest: urlRequest, parameters: params, data: data,
@@ -211,7 +221,7 @@ extension APIClient {
                     sendablePromise.resolve(
                         .failure(self.mapErrorToNetworkError(error)))
                 } else if let httpResponse = response as? HTTPURLResponse,
-                          let responseData = data
+                    let responseData = data
                 {
                     if 200..<300 ~= httpResponse.statusCode {
                         sendablePromise.resolve(.success(responseData))
@@ -294,8 +304,8 @@ extension APIClient {
 
     /// Internal method to make the actual async network request.
     private func makeAsyncRequest<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int) async throws -> T
-    {
+        urlRequest: URLRequest, retryCount: Int
+    ) async throws -> T {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
 
         let session = configuredSession(configuration: configuration)
@@ -331,8 +341,8 @@ extension APIClient {
 
     /// Handles retry logic for failed async requests.
     private func handleAsyncRetry<T: Codable>(
-        urlRequest: URLRequest, retryCount: Int, error: Error) async throws -> T
-    {
+        urlRequest: URLRequest, retryCount: Int, error: Error
+    ) async throws -> T {
         let networkError =
             error as? NetworkError ?? mapErrorToNetworkError(error)
 
@@ -389,8 +399,8 @@ extension APIClient {
     /// - Throws: A NetworkError if the request fails.
     public func asyncUploadRequest<T: Codable>(
         _ endpoint: any NetworkRouter, withName: String, data: Data?,
-        progressCompletion: @escaping ProgressHandler) async throws -> T
-    {
+        progressCompletion: @escaping ProgressHandler
+    ) async throws -> T {
         guard let urlRequest = try? endpoint.asURLRequest(), let file = data
         else {
             throw NetworkError.unknown
@@ -425,8 +435,8 @@ extension APIClient {
     /// Internal method to make the actual async upload request.
     private func makeAsyncUploadRequest<T: Codable>(
         urlRequest: URLRequest, params: Codable?, withName: String, data: Data,
-        progressCompletion: @escaping ProgressHandler, retryCount: Int) async throws -> T
-    {
+        progressCompletion: @escaping ProgressHandler, retryCount: Int
+    ) async throws -> T {
         URLSessionLogger.shared.logRequest(urlRequest, logLevel: logLevel)
         let (newUrlRequest, bodyData) = createBody(
             urlRequest: urlRequest, parameters: params, data: data,
@@ -523,8 +533,8 @@ private class StreamingSessionDelegate<T: Codable>: NSObject,
     // Handle data received
     func urlSession(
         _ session: URLSession, dataTask: URLSessionDataTask,
-        didReceive data: Data)
-    {
+        didReceive data: Data
+    ) {
         dataBuffer.append(data)
 
         while let range = dataBuffer.range(of: Data("\n".utf8)) {
@@ -547,8 +557,8 @@ private class StreamingSessionDelegate<T: Codable>: NSObject,
     // Handle errors and completion
     func urlSession(
         _ session: URLSession, task: URLSessionTask,
-        didCompleteWithError error: Error?)
-    {
+        didCompleteWithError error: Error?
+    ) {
         if let error = error {
             URLSessionLogger.shared.logResponse(
                 nil, data: nil, error: error, logLevel: logLevel)
@@ -592,7 +602,9 @@ extension APIClient {
     }
 
     /// Maps an error response to a NetworkError.
-    private func mapErrorResponseToCustomErrorData(_ data: Data, statusCode: Int)
+    private func mapErrorResponseToCustomErrorData(
+        _ data: Data, statusCode: Int
+    )
         -> NetworkError
     {
         return .customError(statusCode, data)
@@ -639,7 +651,8 @@ extension APIClient {
                     let (bytes, response) = try await session.bytes(
                         for: urlRequest)
                     URLSessionLogger.shared.logResponse(
-                        response, data: nil, error: nil, logLevel: self.logLevel)
+                        response, data: nil, error: nil, logLevel: self.logLevel
+                    )
 
                     var iterator = bytes.makeAsyncIterator()
                     var dataBuffer = Data()
@@ -647,7 +660,8 @@ extension APIClient {
                     while let chunk = try await iterator.next() {
                         dataBuffer.append(chunk)
 
-                        while let range = dataBuffer.range(of: Data("\n".utf8)) {
+                        while let range = dataBuffer.range(of: Data("\n".utf8))
+                        {
                             let lineData = dataBuffer.subdata(
                                 in: dataBuffer.startIndex..<range.lowerBound)
                             dataBuffer.removeSubrange(
@@ -700,8 +714,8 @@ extension APIClient {
     /// Configures and returns a URLSession.
     private func configuredSession(
         delegate: URLSessionDelegate? = nil,
-        configuration: URLSessionConfiguration? = nil) -> URLSession
-    {
+        configuration: URLSessionConfiguration? = nil
+    ) -> URLSession {
         guard let configuration else {
             let configuration = URLSessionConfiguration.default
             configuration.timeoutIntervalForRequest = 120
@@ -713,14 +727,15 @@ extension APIClient {
                 delegateQueue: nil)
         }
         return URLSession(
-            configuration: configuration, delegate: delegate, delegateQueue: nil)
+            configuration: configuration, delegate: delegate, delegateQueue: nil
+        )
     }
 
     /// Creates the body for a multipart form data request.
     private func createBody(
         urlRequest: URLRequest, parameters: Codable?, data: Data,
-        filename: String) -> (URLRequest, Data)
-    {
+        filename: String
+    ) -> (URLRequest, Data) {
         var newUrlRequest = urlRequest
         let boundary = "Boundary-\(UUID().uuidString)"
         let mime = MimeTypeDetector.detectMimeType(from: data)

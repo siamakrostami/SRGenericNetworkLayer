@@ -5,17 +5,16 @@
 //  Created by Siamak Rostami on 9/20/24.
 //
 
-
 // MARK: - PostsAPI.swift
 
 import Foundation
 import SRGenericNetworkLayer
 
 struct PostsAPI: NetworkRouter, Sendable {
-    var baseURLString: String { return "https://jsonplaceholder.typicode.com/" }
-    var method: RequestMethod? { return .get }
-    var path: String { return "posts" }
-    var headers: [String: String]? { return nil }
-    var params: Parameters? { return nil }
-    var queryParams: QueryParameters? { return nil }
+    var baseURLString: String { "https://jsonplaceholder.typicode.com/" }
+    var method: RequestMethod? { .get }
+    var path: String { "posts" }
+    var headers: [String: String]? { nil }
+    var params: Parameters? { nil }
+    var queryParams: QueryParameters? { nil }
 }
