@@ -1,0 +1,48 @@
+name: iOS CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build, Test, and Lint
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.2'  # Latest Xcode version
+
+    - name: Install Dependencies
+      run: |
+        brew install swiftlint  # Optional for linting
+
+    - name: Build the Project
+      run: |
+        xcodebuild clean build \
+        -workspace SRNetworkManager.xcworkspace \
+        -scheme SRNetworkManager \
+        -sdk iphonesimulator \
+        -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=18.2" \
+        -quiet
+
+    - name: Run Unit Tests
+      run: |
+        xcodebuild test \
+        -workspace SRNetworkManager.xcworkspace \
+        -scheme SRNetworkManager \
+        -sdk iphonesimulator \
+        -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=18.2" \
+        -enableCodeCoverage YES
+
+    - name: Lint Code
+      run: |
+        swiftlint || echo "SwiftLint warnings found, but build will continue."
+
