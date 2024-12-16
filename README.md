@@ -5,7 +5,7 @@
 
 ---
 
-![Platform](https://img.shields.io/badge/platform-iOS-blue)
+![Platform](https://img.shields.io/badge/platform-iOS%20|%20tvOS%20|%20macOS-blue)
 ![Swift](https://img.shields.io/badge/swift-6.0-orange)
 ![License](https://img.shields.io/github/license/siamakrostami/SRNetworkManager)
 ![Version](https://img.shields.io/github/v/tag/siamakrostami/SRNetworkManager?label=version)
