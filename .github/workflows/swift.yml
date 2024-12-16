@@ -16,13 +16,12 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        include:
-          - swift: "6.0"
-            xcode: "15.2"
-            package_file: "Package@swift-6.0.swift"
-          - swift: "5.9"
+        swift: ["5.9", "5.8", "5.7"]
+        xcode: ["15.0", "14.3.1"]
+        exclude:
+          # Exclude incompatible combinations
+          - swift: "5.7"
             xcode: "15.0"
-            package_file: "Package@swift-5.9.swift"
     
     steps:
     - name: Checkout Repository
@@ -38,17 +37,18 @@ jobs:
       with:
         xcode-version: ${{ matrix.xcode }}
         
-    - name: Use Correct Package.swift
-      run: |
-        if [ -f "${{ matrix.package_file }}" ]; then
-          cp "${{ matrix.package_file }}" "Package.swift"
-        fi
-        
     - name: Show Environment
       run: |
         swift --version
         xcodebuild -version
         
+    - name: Install Dependencies
+      run: |
+        brew install swiftlint
+        
+    - name: SwiftLint
+      run: swiftlint lint --reporter github-actions-logging
+      
     - name: Build Package
       run: swift build -v
         
@@ -59,12 +59,23 @@ jobs:
       run: |
         xcodebuild clean build \
           -scheme ${{ env.SCHEME_NAME }} \
-          -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=18.2" \
+          -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=17.2" \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
           ONLY_ACTIVE_ARCH=YES
+          
+    - name: Run iOS Tests
+      run: |
+        xcodebuild test \
+          -scheme ${{ env.SCHEME_NAME }} \
+          -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=17.2" \
+          -enableCodeCoverage YES \
+          -configuration Debug \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO
           
     - name: Generate Coverage Report
       uses: maxep/spm-lcov-action@0.3.1
@@ -74,3 +85,24 @@ jobs:
       with:
         swift: true
         swift_project: ${{ env.SCHEME_NAME }}
+
+  documentation:
+    needs: test
+    runs-on: macos-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Generate Documentation
+      uses: SwiftDocOrg/swift-doc@main
+      with:
+        inputs: "Sources"
+        module-name: ${{ env.SCHEME_NAME }}
+        output: "Documentation"
+        
+    - name: Upload Documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: Documentation
+        path: Documentation
