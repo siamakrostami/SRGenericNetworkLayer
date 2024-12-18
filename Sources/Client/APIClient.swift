@@ -272,7 +272,7 @@ extension APIClient {
     /// - Parameter endpoint: The NetworkRouter defining the request.
     /// - Returns: The decoded response.
     /// - Throws: A NetworkError if the request fails.
-    public func asyncRequest<T: Codable>(_ endpoint: any NetworkRouter)
+    public func request<T: Codable>(_ endpoint: any NetworkRouter)
         async throws -> T
     {
         guard let urlRequest = try? endpoint.asURLRequest() else {
@@ -397,7 +397,7 @@ extension APIClient {
     ///   - progressCompletion: A closure to handle upload progress updates.
     /// - Returns: The decoded response.
     /// - Throws: A NetworkError if the request fails.
-    public func asyncUploadRequest<T: Codable>(
+    public func uploadRequest<T: Codable>(
         _ endpoint: any NetworkRouter, withName: String, data: Data?,
         progressCompletion: @escaping ProgressHandler
     ) async throws -> T {
