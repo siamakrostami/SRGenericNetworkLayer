@@ -12,8 +12,9 @@ import Foundation
 import Combine
 import SRNetworkManager
 
-class PostsViewModel: ObservableObject {
-    @Published var posts: [Post] = []
+@MainActor
+final class PostsViewModel: ObservableObject, Sendable {
+    @Published private(set) var posts: [Post] = []
     @Published var showError = false
     @Published var errorMessage = ""
     
@@ -39,7 +40,6 @@ class PostsViewModel: ObservableObject {
 //    }
     
     //MARK: - Async API Call
-    @MainActor
     func fetchPosts(){
         Task{
             do{
