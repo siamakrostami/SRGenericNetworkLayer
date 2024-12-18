@@ -229,7 +229,7 @@ public struct SampleRepositoryQueryParamModel: Codable, Sendable {
 ```swift
 Task {
     do {
-        let user: UserAPI = try await client.asyncRequest(UserAPI())
+        let user: UserAPI = try await client.request(UserAPI())
         print("Received user: \(user)")
     } catch {
         print("Request failed: \(error)")
