@@ -43,7 +43,7 @@ class PostsViewModel: ObservableObject {
     func fetchPosts(){
         Task{
             do{
-                let response: [Post] = try await apiClient.asyncRequest(PostsAPI())
+                let response: [Post] = try await apiClient.request(PostsAPI())
                 self.posts = response
             }catch let error as NetworkError{
                 self.showError = true

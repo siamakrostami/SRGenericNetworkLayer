@@ -42,5 +42,5 @@ let package = Package(
             path: "Tests/SRNetworkManagerTests"
         ),
     ],
-    swiftLanguageVersions: [.v6]
+    swiftLanguageModes: [.v6,.v5]
 )

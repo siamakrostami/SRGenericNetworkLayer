@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/siamakrostami/SRNetworkManager",
       "state" : {
-        "revision" : "6f840ec8323e0305219b539c9a41dda5dbe4057e",
-        "version" : "1.0.17"
+        "revision" : "2bc0e066a96585956df8d2361b13fb33366ae91a",
+        "version" : "1.0.18"
       }
     }
   ],
