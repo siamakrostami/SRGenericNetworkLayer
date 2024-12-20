@@ -29,7 +29,8 @@ let package = Package(
                 "Client",
                 "UploadProgress",
                 "Router",
-                "Data"
+                "Data",
+                "DownloadManager"
             ],
             swiftSettings: [
                 .define("SPM_SWIFT_6"),
